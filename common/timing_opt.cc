@@ -60,6 +60,7 @@ template <> struct hash<std::pair<int, NEXTPNR_NAMESPACE_PREFIX BelId>>
     }
 };
 #ifndef ARCH_GENERIC
+#ifndef ARCH_BORCA
 template <> struct hash<std::pair<NEXTPNR_NAMESPACE_PREFIX IdString, NEXTPNR_NAMESPACE_PREFIX BelId>>
 {
     std::size_t
@@ -71,6 +72,7 @@ template <> struct hash<std::pair<NEXTPNR_NAMESPACE_PREFIX IdString, NEXTPNR_NAM
         return seed;
     }
 };
+#endif
 #endif
 } // namespace std
 
