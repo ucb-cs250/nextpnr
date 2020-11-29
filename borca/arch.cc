@@ -316,7 +316,7 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
 
             std::string belName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "Z" + std::to_string(z) + "_" + "BEL";
+                                  "Z" + std::to_string(z) + "_" + "LUT4_BEL";
             IdString belId = id(belName);
             IdString belType = id("LUT4");
             addBel(belId, belType, Loc(x, y, z), false);
@@ -350,7 +350,7 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
 
             std::string belName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "Z" + std::to_string(z) + "_" + "BEL";
+                                  "Z" + std::to_string(z) + "_" + "DFFER_BEL";
             IdString belId = id(belName);
             IdString belType = id("DFFER");
             addBel(belId, belType, Loc(x, y, z), false);
@@ -380,7 +380,7 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
 
             std::string belName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "Z" + std::to_string(z) + "_" + "BEL";
+                                  "Z" + std::to_string(z) + "_" + "MUX_BEL";
             IdString belId = id(belName);
             IdString belType = id("MUX");
             addBel(belId, belType, Loc(x, y, z), false);
@@ -454,7 +454,7 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
 
             std::string belName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "Z" + std::to_string(z) + "_" + "BEL";
+                                  "Z" + std::to_string(z) + "_" + "CARRY4_BEL";
             IdString belId = id(belName);
             IdString belType = id("CARRY4");
             addBel(belId, belType, Loc(x, y, z), false);

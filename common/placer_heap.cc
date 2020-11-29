@@ -189,11 +189,12 @@ class HeAPPlacer
         }
         // If more than 98% of cells are one cell type, always solve all at once
         // Otherwise, follow full HeAP strategy of rotate&all
-        for (auto &c : ct_count)
+        for (auto &c : ct_count) {
             if (c.second >= 0.98 * int(place_cells.size())) {
                 heap_runs.clear();
                 break;
             }
+        }
 
         if (cfg.placeAllAtOnce) {
             // Never want to deal with LUTs, FFs, MUXFxs seperately,
@@ -289,14 +290,16 @@ class HeAPPlacer
             PlaceStrength strength;
             std::tie(cell, bel, strength) = sc;
             // Ignore constant cells for now
-            if (cell->type == ctx->id("VCC") || cell->type == ctx->id("GND"))
+            if (cell->type == ctx->id("VCC") || cell->type == ctx->id("GND") ||
+                cell->type == ctx->id("$nextpnr_ibuf"))
               continue;
             ctx->bindBel(bel, cell, strength);
         }
 
         for (auto cell : sorted(ctx->cells)) {
             // Ignore constant cells for now
-            if (cell.second->type == ctx->id("VCC") || cell.second->type == ctx->id("GND"))
+            if (cell.second->type == ctx->id("VCC") || cell.second->type == ctx->id("GND") ||
+                cell.second->type == ctx->id("$nextpnr_ibuf"))
               continue;
 
             if (cell.second->bel == BelId())
@@ -317,6 +320,19 @@ class HeAPPlacer
         ctx->check();
 
         placer1_refine(ctx, Placer1Cfg(ctx));
+
+        // Print cells' locations
+        for (auto cell : sorted(ctx->cells)) {
+            CellInfo *ci = cell.second;
+            // Ignore constant cells for now
+            if (ci->type == ctx->id("VCC") || ci->type == ctx->id("GND") ||
+                ci->type == ctx->id("$nextpnr_ibuf"))
+              continue;
+
+            BelId bel = ci->bel;
+            log_info("Placed cell %s to bel %s\n",
+                     ci->name.c_str(ctx), ctx->getBelName(bel).c_str(ctx));
+        }
 
         return true;
     }
@@ -543,7 +559,8 @@ class HeAPPlacer
         for (auto cell : sorted(ctx->cells)) {
             CellInfo *ci = cell.second;
             // Ignore constant cells for now
-            if (ci->type == ctx->id("VCC") || ci->type == ctx->id("GND"))
+            if (ci->type == ctx->id("VCC") || ci->type == ctx->id("GND") ||
+                ci->type == ctx->id("$nextpnr_ibuf"))
               continue;
 
             if (ci->bel != BelId()) {
@@ -666,7 +683,8 @@ class HeAPPlacer
                 continue;
             // Ignore constant cells for now
             if (ni->driver.cell->type == ctx->id("VCC") ||
-                ni->driver.cell->type == ctx->id("GND"))
+                ni->driver.cell->type == ctx->id("GND") ||
+                ni->driver.cell->type == ctx->id("$nextpnr_ibuf"))
               continue;
             if (ni->users.empty())
                 continue;
@@ -785,7 +803,8 @@ class HeAPPlacer
                 continue;
             // Ignore constant cells for now
             if (ni->driver.cell->type == ctx->id("VCC") ||
-                ni->driver.cell->type == ctx->id("GND"))
+                ni->driver.cell->type == ctx->id("GND") ||
+                ni->driver.cell->type == ctx->id("$nextpnr_ibuf"))
               continue;
             CellLocation &drvloc = cell_locs.at(ni->driver.cell->name);
             if (drvloc.global)
@@ -1753,7 +1772,7 @@ PlacerHeapCfg::PlacerHeapCfg(Context *ctx)
     timingWeight = ctx->setting<int>("placerHeap/timingWeight", 10);
     timing_driven = ctx->setting<bool>("timing_driven");
     solverTolerance = 1e-5;
-    placeAllAtOnce = false;
+    placeAllAtOnce = true;
 
     hpwl_scale_x = 1;
     hpwl_scale_y = 1;

@@ -233,7 +233,8 @@ class SAPlacer
             for (auto &cell : ctx->cells) {
                 CellInfo *ci = cell.second.get();
                 // Ignore constant cells for now
-                if (ci->type == ctx->id("VCC") || ci->type == ctx->id("GND"))
+                if (ci->type == ctx->id("VCC") || ci->type == ctx->id("GND") ||
+                    ci->type == ctx->id("$nextpnr_ibuf"))
                     continue;
                 if (ci->belStrength > STRENGTH_STRONG)
                     continue;
@@ -430,7 +431,8 @@ class SAPlacer
         }
         for (auto cell : sorted(ctx->cells)) {
             // Ignore constant cells for now
-            if (cell.second->type == ctx->id("VCC") || cell.second->type == ctx->id("GND"))
+            if (cell.second->type == ctx->id("VCC") || cell.second->type == ctx->id("GND") ||
+                cell.second->type == ctx->id("$nextpnr_ibuf"))
                 continue;
 
             if (get_constraints_distance(ctx, cell.second) != 0)

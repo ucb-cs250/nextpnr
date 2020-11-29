@@ -175,10 +175,29 @@ static void pack_virtual_io(Context *ctx)
 {
     std::unordered_set<IdString> packed_cells;
     std::vector<std::unique_ptr<CellInfo>> new_cells;
+    std::unordered_set<IdString> clk_iocells;
     log_info("Packing IOs..\n");
+
+    // Find clock-related IOB
+    for (auto &n : ctx->nets) {
+        auto ni = n.second.get();
+        for (auto user : ni->users) {
+            // Find a net that drives a DFF, then check if that net connects
+            // to port "CLK" of the DFF
+            if (!is_ff(ctx, user.cell))
+                continue;
+            if (ni == user.cell->ports.at(ctx->id("CLK")).net) {
+                if (is_nextpnr_iob(ctx, ni->driver.cell))
+                  clk_iocells.insert(ni->driver.cell->name);
+            }
+        }
+    }
 
     for (auto cell : sorted(ctx->cells)) {
         CellInfo *ci = cell.second;
+        // If this is a clock iocell, we don't convert it to a DFF
+        if (clk_iocells.find(ci->name) != clk_iocells.end())
+            continue;
         if (is_nextpnr_iob(ctx, ci)) {
             std::unique_ptr<CellInfo> packed =
                     create_dff_cell(ctx, ctx->id("DFFER"), ci->name.str(ctx) + "_DFF");
