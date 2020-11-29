@@ -25,12 +25,14 @@
 #include "log.h"
 #include "util.h"
 
+#include <iostream>
+
 NEXTPNR_NAMESPACE_BEGIN
 
-// Pack LUTs and LUT-FF pairs
-static void pack_lut_lutffs(Context *ctx)
+// Pack LUTs
+static void pack_luts(Context *ctx)
 {
-    log_info("Packing LUT-FFs..\n");
+    log_info("Packing LUTs..\n");
 
     std::unordered_set<IdString> packed_cells;
     std::vector<std::unique_ptr<CellInfo>> new_cells;
@@ -40,38 +42,12 @@ static void pack_lut_lutffs(Context *ctx)
             log_info("cell '%s' is of type '%s'\n", ci->name.c_str(ctx), ci->type.c_str(ctx));
         if (is_lut(ctx, ci)) {
             std::unique_ptr<CellInfo> packed =
-                    create_borca_cell(ctx, ctx->id("BORCA_SLICE"), ci->name.str(ctx) + "_LC");
+                    create_clb(ctx, ctx->id("CLB"), ci->name.str(ctx) + "_LUT4");
             std::copy(ci->attrs.begin(), ci->attrs.end(), std::inserter(packed->attrs, packed->attrs.begin()));
             packed_cells.insert(ci->name);
             if (ctx->verbose)
                 log_info("packed cell %s into %s\n", ci->name.c_str(ctx), packed->name.c_str(ctx));
-            // See if we can pack into a DFF
-            // TODO: LUT cascade
-            NetInfo *o = ci->ports.at(ctx->id("Q")).net;
-            CellInfo *dff = net_only_drives(ctx, o, is_ff, ctx->id("D"), true);
-            auto lut_bel = ci->attrs.find(ctx->id("BEL"));
-            bool packed_dff = false;
-            if (dff) {
-                if (ctx->verbose)
-                    log_info("found attached dff %s\n", dff->name.c_str(ctx));
-                auto dff_bel = dff->attrs.find(ctx->id("BEL"));
-                if (lut_bel != ci->attrs.end() && dff_bel != dff->attrs.end() && lut_bel->second != dff_bel->second) {
-                    // Locations don't match, can't pack
-                } else {
-                    lut_to_lc(ctx, ci, packed.get(), false);
-                    dff_to_lc(ctx, dff, packed.get(), false);
-                    ctx->nets.erase(o->name);
-                    if (dff_bel != dff->attrs.end())
-                        packed->attrs[ctx->id("BEL")] = dff_bel->second;
-                    packed_cells.insert(dff->name);
-                    if (ctx->verbose)
-                        log_info("packed cell %s into %s\n", dff->name.c_str(ctx), packed->name.c_str(ctx));
-                    packed_dff = true;
-                }
-            }
-            if (!packed_dff) {
-                lut_to_lc(ctx, ci, packed.get(), true);
-            }
+            lut_to_lc(ctx, ci, packed.get(), true);
             new_cells.push_back(std::move(packed));
         }
     }
@@ -83,8 +59,8 @@ static void pack_lut_lutffs(Context *ctx)
     }
 }
 
-// Pack FFs not packed as LUTFFs
-static void pack_nonlut_ffs(Context *ctx)
+// Pack FFs
+static void pack_ffs(Context *ctx)
 {
     log_info("Packing non-LUT FFs..\n");
 
@@ -94,11 +70,12 @@ static void pack_nonlut_ffs(Context *ctx)
     for (auto cell : sorted(ctx->cells)) {
         CellInfo *ci = cell.second;
         if (is_ff(ctx, ci)) {
+            for (auto p : ci->ports) {
+              std::cout << "DFF Ports " << p.first.str(ctx) << '\n';
+            }
             std::unique_ptr<CellInfo> packed =
-                    create_borca_cell(ctx, ctx->id("BORCA_SLICE"), ci->name.str(ctx) + "_DFFLC");
+                    create_clb(ctx, ctx->id("CLB"), ci->name.str(ctx) + "_DFF");
             std::copy(ci->attrs.begin(), ci->attrs.end(), std::inserter(packed->attrs, packed->attrs.begin()));
-            if (ctx->verbose)
-                log_info("packed cell %s into %s\n", ci->name.c_str(ctx), packed->name.c_str(ctx));
             packed_cells.insert(ci->name);
             dff_to_lc(ctx, ci, packed.get(), true);
             new_cells.push_back(std::move(packed));
@@ -137,7 +114,7 @@ static void pack_constants(Context *ctx)
 {
     log_info("Packing constants..\n");
 
-    std::unique_ptr<CellInfo> gnd_cell = create_borca_cell(ctx, ctx->id("BORCA_SLICE"), "$PACKER_GND");
+    std::unique_ptr<CellInfo> gnd_cell = create_clb(ctx, ctx->id("BORCA_CELL"), "$PACKER_GND");
     gnd_cell->params[ctx->id("INIT")] = Property(0, 1 << ctx->args.K);
     std::unique_ptr<NetInfo> gnd_net = std::unique_ptr<NetInfo>(new NetInfo);
     gnd_net->name = ctx->id("$PACKER_GND_NET");
@@ -145,7 +122,7 @@ static void pack_constants(Context *ctx)
     gnd_net->driver.port = ctx->id("F");
     gnd_cell->ports.at(ctx->id("F")).net = gnd_net.get();
 
-    std::unique_ptr<CellInfo> vcc_cell = create_borca_cell(ctx, ctx->id("BORCA_SLICE"), "$PACKER_VCC");
+    std::unique_ptr<CellInfo> vcc_cell = create_clb(ctx, ctx->id("BORCA_CELL"), "$PACKER_VCC");
     // Fill with 1s
     vcc_cell->params[ctx->id("INIT")] = Property(Property::S1).extract(0, (1 << ctx->args.K), Property::S1);
     std::unique_ptr<NetInfo> vcc_net = std::unique_ptr<NetInfo>(new NetInfo);
@@ -194,77 +171,102 @@ static bool is_nextpnr_iob(Context *ctx, CellInfo *cell)
            cell->type == ctx->id("$nextpnr_iobuf");
 }
 
-static bool is_borca_iob(const Context *ctx, const CellInfo *cell) { return cell->type == ctx->id("BORCA_IOB"); }
-
-// Pack IO buffers
-static void pack_io(Context *ctx)
+static void pack_virtual_io(Context *ctx)
 {
     std::unordered_set<IdString> packed_cells;
-    std::unordered_set<IdString> delete_nets;
-
     std::vector<std::unique_ptr<CellInfo>> new_cells;
     log_info("Packing IOs..\n");
 
     for (auto cell : sorted(ctx->cells)) {
         CellInfo *ci = cell.second;
         if (is_nextpnr_iob(ctx, ci)) {
-            CellInfo *iob = nullptr;
-            if (ci->type == ctx->id("$nextpnr_ibuf") || ci->type == ctx->id("$nextpnr_iobuf")) {
-                iob = net_only_drives(ctx, ci->ports.at(ctx->id("O")).net, is_borca_iob, ctx->id("PAD"), true, ci);
-
-            } else if (ci->type == ctx->id("$nextpnr_obuf")) {
-                NetInfo *net = ci->ports.at(ctx->id("I")).net;
-                iob = net_only_drives(ctx, net, is_borca_iob, ctx->id("PAD"), true, ci);
-            }
-            if (iob != nullptr) {
-                // Trivial case, BORCA_IOB used. Just destroy the net and the
-                // iobuf
-                log_info("%s feeds BORCA_IOB %s, removing %s %s.\n", ci->name.c_str(ctx), iob->name.c_str(ctx),
-                         ci->type.c_str(ctx), ci->name.c_str(ctx));
-                NetInfo *net = iob->ports.at(ctx->id("PAD")).net;
-                if (((ci->type == ctx->id("$nextpnr_ibuf") || ci->type == ctx->id("$nextpnr_iobuf")) &&
-                     net->users.size() > 1) ||
-                    (ci->type == ctx->id("$nextpnr_obuf") && (net->users.size() > 2 || net->driver.cell != nullptr)))
-                    log_error("PAD of %s '%s' connected to more than a single top level IO.\n", iob->type.c_str(ctx),
-                              iob->name.c_str(ctx));
-
-                if (net != nullptr) {
-                    delete_nets.insert(net->name);
-                    iob->ports.at(ctx->id("PAD")).net = nullptr;
-                }
-                if (ci->type == ctx->id("$nextpnr_iobuf")) {
-                    NetInfo *net2 = ci->ports.at(ctx->id("I")).net;
-                    if (net2 != nullptr) {
-                        delete_nets.insert(net2->name);
-                    }
-                }
-            } else if (bool_or_default(ctx->settings, ctx->id("disable_iobs"))) {
-                // No IO buffer insertion; just remove nextpnr_[io]buf
-                for (auto &p : ci->ports)
-                    disconnect_port(ctx, ci, p.first);
-            } else {
-                // Create a BORCA_IOB buffer
-                std::unique_ptr<CellInfo> ice_cell =
-                        create_borca_cell(ctx, ctx->id("BORCA_IOB"), ci->name.str(ctx) + "$iob");
-                nxio_to_iob(ctx, ci, ice_cell.get(), packed_cells);
-                new_cells.push_back(std::move(ice_cell));
-                iob = new_cells.back().get();
-            }
+            std::unique_ptr<CellInfo> packed =
+                    create_dff_cell(ctx, ctx->id("DFFER"), ci->name.str(ctx) + "_DFF");
+            if (ctx->verbose)
+                log_info("packed cell %s into %s\n", ci->name.c_str(ctx), packed->name.c_str(ctx));
             packed_cells.insert(ci->name);
-            if (iob != nullptr)
-                std::copy(ci->attrs.begin(), ci->attrs.end(), std::inserter(iob->attrs, iob->attrs.begin()));
+            vio_to_dff(ctx, ci, packed.get());
+            new_cells.push_back(std::move(packed));
         }
     }
+
     for (auto pcell : packed_cells) {
         ctx->cells.erase(pcell);
-    }
-    for (auto dnet : delete_nets) {
-        ctx->nets.erase(dnet);
     }
     for (auto &ncell : new_cells) {
         ctx->cells[ncell->name] = std::move(ncell);
     }
 }
+
+//// Pack IO buffers
+//static void pack_io(Context *ctx)
+//{
+//    std::unordered_set<IdString> packed_cells;
+//    std::unordered_set<IdString> delete_nets;
+//
+//    std::vector<std::unique_ptr<CellInfo>> new_cells;
+//    log_info("Packing IOs..\n");
+//
+//    for (auto cell : sorted(ctx->cells)) {
+//        CellInfo *ci = cell.second;
+//        if (is_nextpnr_iob(ctx, ci)) {
+//            CellInfo *iob = nullptr;
+//            if (ci->type == ctx->id("$nextpnr_ibuf") || ci->type == ctx->id("$nextpnr_iobuf")) {
+//                iob = net_only_drives(ctx, ci->ports.at(ctx->id("O")).net, is_borca_iob, ctx->id("PAD"), true, ci);
+//
+//            } else if (ci->type == ctx->id("$nextpnr_obuf")) {
+//                NetInfo *net = ci->ports.at(ctx->id("I")).net;
+//                iob = net_only_drives(ctx, net, is_borca_iob, ctx->id("PAD"), true, ci);
+//            }
+//            if (iob != nullptr) {
+//                // Trivial case, BORCA_IOB used. Just destroy the net and the
+//                // iobuf
+//                log_info("%s feeds BORCA_IOB %s, removing %s %s.\n", ci->name.c_str(ctx), iob->name.c_str(ctx),
+//                         ci->type.c_str(ctx), ci->name.c_str(ctx));
+//                NetInfo *net = iob->ports.at(ctx->id("PAD")).net;
+//                if (((ci->type == ctx->id("$nextpnr_ibuf") || ci->type == ctx->id("$nextpnr_iobuf")) &&
+//                     net->users.size() > 1) ||
+//                    (ci->type == ctx->id("$nextpnr_obuf") && (net->users.size() > 2 || net->driver.cell != nullptr)))
+//                    log_error("PAD of %s '%s' connected to more than a single top level IO.\n", iob->type.c_str(ctx),
+//                              iob->name.c_str(ctx));
+//
+//                if (net != nullptr) {
+//                    delete_nets.insert(net->name);
+//                    iob->ports.at(ctx->id("PAD")).net = nullptr;
+//                }
+//                if (ci->type == ctx->id("$nextpnr_iobuf")) {
+//                    NetInfo *net2 = ci->ports.at(ctx->id("I")).net;
+//                    if (net2 != nullptr) {
+//                        delete_nets.insert(net2->name);
+//                    }
+//                }
+//            } else if (bool_or_default(ctx->settings, ctx->id("disable_iobs"))) {
+//                // No IO buffer insertion; just remove nextpnr_[io]buf
+//                for (auto &p : ci->ports)
+//                    disconnect_port(ctx, ci, p.first);
+//            } else {
+//                // Create a BORCA_IOB buffer
+//                std::unique_ptr<CellInfo> ice_cell =
+//                        create_clb(ctx, ctx->id("BORCA_IOB"), ci->name.str(ctx) + "$iob");
+//                nxio_to_iob(ctx, ci, ice_cell.get(), packed_cells);
+//                new_cells.push_back(std::move(ice_cell));
+//                iob = new_cells.back().get();
+//            }
+//            packed_cells.insert(ci->name);
+//            if (iob != nullptr)
+//                std::copy(ci->attrs.begin(), ci->attrs.end(), std::inserter(iob->attrs, iob->attrs.begin()));
+//        }
+//    }
+//    for (auto pcell : packed_cells) {
+//        ctx->cells.erase(pcell);
+//    }
+//    for (auto dnet : delete_nets) {
+//        ctx->nets.erase(dnet);
+//    }
+//    for (auto &ncell : new_cells) {
+//        ctx->cells[ncell->name] = std::move(ncell);
+//    }
+//}
 
 // Main pack function
 bool Arch::pack()
@@ -272,10 +274,11 @@ bool Arch::pack()
     Context *ctx = getCtx();
     try {
         log_break();
-        pack_constants(ctx);
-        pack_io(ctx);
-        pack_lut_lutffs(ctx);
-        pack_nonlut_ffs(ctx);
+        //pack_constants(ctx);
+        //pack_io(ctx);
+        //pack_luts(ctx);
+        //pack_ffs(ctx);
+        pack_virtual_io(ctx);
         ctx->settings[ctx->id("pack")] = 1;
         ctx->assignArchInfo();
         log_info("Checksum: 0x%08x\n", ctx->checksum());

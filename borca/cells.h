@@ -19,33 +19,43 @@
 
 #include "nextpnr.h"
 
-#ifndef BORCA_CELLS_H
-#define BORCA_CELLS_H
+#ifndef CLBS_H
+#define CLBS_H
 
 NEXTPNR_NAMESPACE_BEGIN
 
-// Create a borca arch cell and return it
+// Create a CLB cell and return it
 // Name will be automatically assigned if not specified
-std::unique_ptr<CellInfo> create_borca_cell(Context *ctx, IdString type, std::string name = "");
+std::unique_ptr<CellInfo> create_clb(Context *ctx, IdString type, std::string name = "");
+std::unique_ptr<CellInfo> create_dff_cell(Context *ctx, IdString type, std::string name = "");
 
 // Return true if a cell is a LUT
-inline bool is_lut(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("LUT"); }
+inline bool is_lut(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("LUT4"); }
 
 // Return true if a cell is a flipflop
-inline bool is_ff(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("DFF"); }
+inline bool is_ff(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("DFFER"); }
 
-inline bool is_lc(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("BORCA_SLICE"); }
+// Return true if a cell is a carry_chain
+inline bool is_carry_chain(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("carry_chain"); }
 
-// Convert a LUT primitive to (part of) an BORCA_SLICE, swapping ports
+inline bool is_vcc(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("VCC"); }
+
+inline bool is_gnd(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("GND"); }
+
+inline bool is_lc(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("CLB"); }
+
+// Convert a LUT primitive to (part of) an CLB, swapping ports
 // as needed. Set no_dff if a DFF is not being used, so that the output
 // can be reconnected
 void lut_to_lc(const Context *ctx, CellInfo *lut, CellInfo *lc, bool no_dff = true);
 
-// Convert a DFF primitive to (part of) an BORCA_SLICE, setting parameters
+// Convert a DFF primitive to (part of) an CLB, setting parameters
 // and reconnecting signals as necessary. If pass_thru_lut is True, the LUT will
 // be configured as pass through and D connected to I0, otherwise D will be
 // ignored
 void dff_to_lc(const Context *ctx, CellInfo *dff, CellInfo *lc, bool pass_thru_lut = false);
+
+void vio_to_dff(const Context *ctx, CellInfo *io, CellInfo *lc);
 
 // Convert a nextpnr IO buffer to a BORCA_IOB
 void nxio_to_iob(Context *ctx, CellInfo *nxio, CellInfo *sbio, std::unordered_set<IdString> &todelete_cells);

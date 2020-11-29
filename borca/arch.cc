@@ -264,6 +264,228 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
 {
     // Dummy for empty decals
     decal_graphics[IdString()];
+    gridDimX = 8;
+    gridDimY = 8;
+
+    // Number of cells per Tile
+    // 8 4-LUTs, 8 FFs, 1 CARRY4, 3 MUXES
+    int numBelsPerTile = 8 + 8 + 1 + 3;
+    // Number of PIPs per Tile
+    // 2 x CB + SB
+    int numPipsPerTile = 415 * 2 + 48;
+
+    for (int x = 0; x < gridDimX; x++) {
+      std::vector<int> tmp0, tmp1;
+      for (int y = 0; y < gridDimY; y++) {
+        tmp0.push_back(numBelsPerTile);
+        tmp1.push_back(numPipsPerTile);
+      }
+      tileBelDimZ.push_back(tmp0);
+      tilePipDimZ.push_back(tmp1);
+    }
+
+    // WireInfo & BelInfo
+    IdString belInputType  = id("BEL_INPUT");
+    IdString belOutputType = id("BEL_OUTPUT");
+
+    for (int x = 0; x < gridDimX; x++) {
+      for (int y = 0; y < gridDimY; y++) {
+        for (int z = 0; z < numBelsPerTile; z++) {
+          if (z >= 0 && z < 8) {
+            // LUTs
+            std::string i0Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "I0";
+            std::string i1Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "I1";
+            std::string i2Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "I2";
+            std::string i3Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "I3";
+            std::string outName = "X" + std::to_string(x) +
+                                  "Y" + std::to_string(y) +
+                                  "Z" + std::to_string(z) + "_" + "O";
+            addWire(id(i0Name),  belInputType, x, y);
+            addWire(id(i1Name),  belInputType, x, y);
+            addWire(id(i2Name),  belInputType, x, y);
+            addWire(id(i3Name),  belInputType, x, y);
+            addWire(id(outName), belOutputType, x, y);
+
+            std::string belName = "X" + std::to_string(x) +
+                                  "Y" + std::to_string(y) +
+                                  "Z" + std::to_string(z) + "_" + "BEL";
+            IdString belId = id(belName);
+            IdString belType = id("LUT4");
+            addBel(belId, belType, Loc(x, y, z), false);
+            addBelInput(belId, id("I0"), id(i0Name));
+            addBelInput(belId, id("I1"), id(i1Name));
+            addBelInput(belId, id("I2"), id(i2Name));
+            addBelInput(belId, id("I3"), id(i3Name));
+            addBelOutput(belId, id("O"), id(outName));
+          } else if (z >= 8 && z < 16) {
+            // DFFERs
+            std::string dName = "X" + std::to_string(x) +
+                                "Y" + std::to_string(y) +
+                                "Z" + std::to_string(z) + "_" + "D";
+            std::string qName = "X" + std::to_string(x) +
+                                "Y" + std::to_string(y) +
+                                "Z" + std::to_string(z) + "_" + "Q";
+            std::string clkName = "X" + std::to_string(x) +
+                                  "Y" + std::to_string(y) +
+                                  "Z" + std::to_string(z) + "_" + "CLK";
+            std::string ceName = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "CE";
+            std::string rstName = "X" + std::to_string(x) +
+                                  "Y" + std::to_string(y) +
+                                  "Z" + std::to_string(z) + "_" + "RST";
+            addWire(id(dName),   belInputType, x, y);
+            addWire(id(clkName), belInputType, x, y);
+            addWire(id(ceName),  belInputType, x, y);
+            addWire(id(rstName), belInputType, x, y);
+            addWire(id(qName),   belOutputType, x, y);
+
+            std::string belName = "X" + std::to_string(x) +
+                                  "Y" + std::to_string(y) +
+                                  "Z" + std::to_string(z) + "_" + "BEL";
+            IdString belId = id(belName);
+            IdString belType = id("DFFER");
+            addBel(belId, belType, Loc(x, y, z), false);
+            addBelInput(belId, id("D"), id(dName));
+            addBelInput(belId, id("CLK"), id(clkName));
+            addBelInput(belId, id("CE"), id(ceName));
+            addBelInput(belId, id("RST"), id(rstName));
+            addBelOutput(belId, id("Q"), id(qName));
+          } else if (z >= 16 && z < 19) {
+            // MUXes
+            std::string i0Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "I0";
+            std::string i1Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "I1";
+            std::string selName = "X" + std::to_string(x) +
+                                  "Y" + std::to_string(y) +
+                                  "Z" + std::to_string(z) + "_" + "SEL";
+            std::string outName = "X" + std::to_string(x) +
+                                  "Y" + std::to_string(y) +
+                                  "Z" + std::to_string(z) + "_" + "O";
+            addWire(id(i0Name), belInputType, x, y);
+            addWire(id(i1Name), belInputType, x, y);
+            addWire(id(selName), belInputType, x, y);
+            addWire(id(outName), belOutputType, x, y);
+
+            std::string belName = "X" + std::to_string(x) +
+                                  "Y" + std::to_string(y) +
+                                  "Z" + std::to_string(z) + "_" + "BEL";
+            IdString belId = id(belName);
+            IdString belType = id("MUX");
+            addBel(belId, belType, Loc(x, y, z), false);
+            addBelInput(belId, id("I0"), id(i0Name));
+            addBelInput(belId, id("I1"), id(i1Name));
+            addBelOutput(belId, id("O"), id(outName));
+          } else {
+            // CARRY
+            std::string ciName = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "CI";
+            std::string coName = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "CO";
+
+            std::string g0Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "G0";
+            std::string g1Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "G1";
+            std::string g2Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "G2";
+            std::string g3Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "G3";
+
+            std::string p0Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "P0";
+            std::string p1Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "P1";
+            std::string p2Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "P2";
+            std::string p3Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "P3";
+
+            std::string s0Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "S0";
+            std::string s1Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "S1";
+            std::string s2Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "S2";
+            std::string s3Name = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "Z" + std::to_string(z) + "_" + "S3";
+            addWire(id(ciName), belInputType, x, y);
+            addWire(id(coName), belOutputType, x, y);
+
+            addWire(id(g0Name), belInputType, x, y);
+            addWire(id(g1Name), belInputType, x, y);
+            addWire(id(g2Name), belInputType, x, y);
+            addWire(id(g3Name), belInputType, x, y);
+
+            addWire(id(p0Name), belInputType, x, y);
+            addWire(id(p1Name), belInputType, x, y);
+            addWire(id(p2Name), belInputType, x, y);
+            addWire(id(p3Name), belInputType, x, y);
+
+            addWire(id(s0Name), belOutputType, x, y);
+            addWire(id(s1Name), belOutputType, x, y);
+            addWire(id(s2Name), belOutputType, x, y);
+            addWire(id(s3Name), belOutputType, x, y);
+
+            std::string belName = "X" + std::to_string(x) +
+                                  "Y" + std::to_string(y) +
+                                  "Z" + std::to_string(z) + "_" + "BEL";
+            IdString belId = id(belName);
+            IdString belType = id("CARRY4");
+            addBel(belId, belType, Loc(x, y, z), false);
+            addBelInput(belId, id("CI"), id(ciName));
+            addBelOutput(belId, id("CO"), id(coName));
+
+            addBelInput(belId, id("G0"), id(g0Name));
+            addBelInput(belId, id("G1"), id(g1Name));
+            addBelInput(belId, id("G2"), id(g2Name));
+            addBelInput(belId, id("G3"), id(g3Name));
+
+            addBelInput(belId, id("P0"), id(p0Name));
+            addBelInput(belId, id("P1"), id(p1Name));
+            addBelInput(belId, id("P2"), id(p2Name));
+            addBelInput(belId, id("P3"), id(p3Name));
+
+            addBelOutput(belId, id("S0"), id(s0Name));
+            addBelOutput(belId, id("S1"), id(s1Name));
+            addBelOutput(belId, id("S2"), id(s2Name));
+            addBelOutput(belId, id("S3"), id(s3Name));
+          }
+        }
+      }
+    }
+
+    // PipInfo
+//    for (int x = 0; x < gridDimX; x++) {
+//      for (int y = 0; y < gridDimY; y++) {
+//      }
+//    }
+
 }
 
 void IdString::initialize_arch(const BaseCtx *ctx) {}
@@ -545,24 +767,26 @@ bool Arch::place()
 {
     std::string placer = str_or_default(settings, id("placer"), defaultPlacer);
     if (placer == "heap") {
-        bool have_iobuf_or_constr = false;
-        for (auto cell : sorted(cells)) {
-            CellInfo *ci = cell.second;
-            if (ci->type == id("BORCA_IOB") || ci->bel != BelId() || ci->attrs.count(id("BEL"))) {
-                have_iobuf_or_constr = true;
-                break;
-            }
-        }
-        bool retVal;
-        if (!have_iobuf_or_constr) {
-            log_warning("Unable to use HeAP due to a lack of IO buffers or constrained cells as anchors; reverting to "
-                        "SA.\n");
-            retVal = placer1(getCtx(), Placer1Cfg(getCtx()));
-        } else {
-            PlacerHeapCfg cfg(getCtx());
-            cfg.ioBufTypes.insert(id("BORCA_IOB"));
-            retVal = placer_heap(getCtx(), cfg);
-        }
+//        bool have_iobuf_or_constr = false;
+//        for (auto cell : sorted(cells)) {
+//            CellInfo *ci = cell.second;
+//            if (ci->type == id("BORCA_IOB") || ci->bel != BelId() || ci->attrs.count(id("BEL"))) {
+//                have_iobuf_or_constr = true;
+//                break;
+//            }
+//        }
+//        bool retVal;
+//        if (!have_iobuf_or_constr) {
+//            log_warning("Unable to use HeAP due to a lack of IO buffers or constrained cells as anchors; reverting to "
+//                        "SA.\n");
+//            retVal = placer1(getCtx(), Placer1Cfg(getCtx()));
+//        } else {
+//            PlacerHeapCfg cfg(getCtx());
+//            cfg.ioBufTypes.insert(id("BORCA_IOB"));
+//            retVal = placer_heap(getCtx(), cfg);
+//        }
+        PlacerHeapCfg cfg(getCtx());
+        bool retVal = placer_heap(getCtx(), cfg);
         getCtx()->settings[getCtx()->id("place")] = 1;
         archInfoToAttributes();
         return retVal;
@@ -695,7 +919,7 @@ void Arch::assignArchInfo()
 {
     for (auto &cell : getCtx()->cells) {
         CellInfo *ci = cell.second.get();
-        if (ci->type == id("BORCA_SLICE")) {
+        if (ci->type == id("BORCA_CELL")) {
             ci->is_slice = true;
             ci->slice_clk = get_net_or_empty(ci, id("CLK"));
         } else {

@@ -232,6 +232,9 @@ class SAPlacer
         } else {
             for (auto &cell : ctx->cells) {
                 CellInfo *ci = cell.second.get();
+                // Ignore constant cells for now
+                if (ci->type == ctx->id("VCC") || ci->type == ctx->id("GND"))
+                    continue;
                 if (ci->belStrength > STRENGTH_STRONG)
                     continue;
                 else if (ci->constr_parent != nullptr)
@@ -425,10 +428,15 @@ class SAPlacer
                 }
             }
         }
-        for (auto cell : sorted(ctx->cells))
+        for (auto cell : sorted(ctx->cells)) {
+            // Ignore constant cells for now
+            if (cell.second->type == ctx->id("VCC") || cell.second->type == ctx->id("GND"))
+                continue;
+
             if (get_constraints_distance(ctx, cell.second) != 0)
                 log_error("constraint satisfaction check failed for cell '%s' at Bel '%s'\n", cell.first.c_str(ctx),
                           ctx->getBelName(cell.second->bel).c_str(ctx));
+        }
         timing_analysis(ctx);
         ctx->unlock();
         return true;

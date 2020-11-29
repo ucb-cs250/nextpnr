@@ -50,6 +50,7 @@
 #include "placer1.h"
 #include "timing.h"
 #include "util.h"
+#include <iostream>
 NEXTPNR_NAMESPACE_BEGIN
 
 namespace {
@@ -287,10 +288,17 @@ class HeAPPlacer
             BelId bel;
             PlaceStrength strength;
             std::tie(cell, bel, strength) = sc;
+            // Ignore constant cells for now
+            if (cell->type == ctx->id("VCC") || cell->type == ctx->id("GND"))
+              continue;
             ctx->bindBel(bel, cell, strength);
         }
 
         for (auto cell : sorted(ctx->cells)) {
+            // Ignore constant cells for now
+            if (cell.second->type == ctx->id("VCC") || cell.second->type == ctx->id("GND"))
+              continue;
+
             if (cell.second->bel == BelId())
                 log_error("Found unbound cell %s\n", cell.first.c_str(ctx));
             if (ctx->getBoundBelCell(cell.second->bel) != cell.second)
@@ -534,6 +542,10 @@ class HeAPPlacer
         }
         for (auto cell : sorted(ctx->cells)) {
             CellInfo *ci = cell.second;
+            // Ignore constant cells for now
+            if (ci->type == ctx->id("VCC") || ci->type == ctx->id("GND"))
+              continue;
+
             if (ci->bel != BelId()) {
                 Loc loc = ctx->getBelLocation(ci->bel);
                 cell_locs[cell.first].x = loc.x;
@@ -652,6 +664,10 @@ class HeAPPlacer
             NetInfo *ni = net.second;
             if (ni->driver.cell == nullptr)
                 continue;
+            // Ignore constant cells for now
+            if (ni->driver.cell->type == ctx->id("VCC") ||
+                ni->driver.cell->type == ctx->id("GND"))
+              continue;
             if (ni->users.empty())
                 continue;
             if (cell_locs.at(ni->driver.cell->name).global)
@@ -767,6 +783,10 @@ class HeAPPlacer
             NetInfo *ni = net.second;
             if (ni->driver.cell == nullptr)
                 continue;
+            // Ignore constant cells for now
+            if (ni->driver.cell->type == ctx->id("VCC") ||
+                ni->driver.cell->type == ctx->id("GND"))
+              continue;
             CellLocation &drvloc = cell_locs.at(ni->driver.cell->name);
             if (drvloc.global)
                 continue;
