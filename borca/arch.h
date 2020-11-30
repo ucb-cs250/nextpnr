@@ -140,6 +140,8 @@ struct Arch : BaseCtx
 
     std::unordered_map<IdString, CellTiming> cellTiming;
 
+    void setupPipsForCLB(int x, int y, int numSingleWires, int numDoubleWires, int side);
+
     void addWire(IdString name, IdString type, int x, int y);
     void addPip(IdString name, IdString type, IdString srcWire, IdString dstWire, DelayInfo delay, Loc loc);
     void addAlias(IdString name, IdString type, IdString srcWire, IdString dstWire, DelayInfo delay);
