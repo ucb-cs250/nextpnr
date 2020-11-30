@@ -398,42 +398,42 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
 
             std::string g0Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "G0";
+                                 "Z" + std::to_string(z) + "_" + "G[0]";
             std::string g1Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "G1";
+                                 "Z" + std::to_string(z) + "_" + "G[1]";
             std::string g2Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "G2";
+                                 "Z" + std::to_string(z) + "_" + "G[2]";
             std::string g3Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "G3";
+                                 "Z" + std::to_string(z) + "_" + "G[3]";
 
             std::string p0Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "P0";
+                                 "Z" + std::to_string(z) + "_" + "P[0]";
             std::string p1Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "P1";
+                                 "Z" + std::to_string(z) + "_" + "P[1]";
             std::string p2Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "P2";
+                                 "Z" + std::to_string(z) + "_" + "P[2]";
             std::string p3Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "P3";
+                                 "Z" + std::to_string(z) + "_" + "P[3]";
 
             std::string s0Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "S0";
+                                 "Z" + std::to_string(z) + "_" + "S[0]";
             std::string s1Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "S1";
+                                 "Z" + std::to_string(z) + "_" + "S[1]";
             std::string s2Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "S2";
+                                 "Z" + std::to_string(z) + "_" + "S[2]";
             std::string s3Name = "X" + std::to_string(x) +
                                  "Y" + std::to_string(y) +
-                                 "Z" + std::to_string(z) + "_" + "S3";
+                                 "Z" + std::to_string(z) + "_" + "S[3]";
             addWire(id(ciName), belInputType, x, y);
             addWire(id(coName), belOutputType, x, y);
 
@@ -461,20 +461,20 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
             addBelInput(belId, id("CI"), id(ciName));
             addBelOutput(belId, id("CO"), id(coName));
 
-            addBelInput(belId, id("G0"), id(g0Name));
-            addBelInput(belId, id("G1"), id(g1Name));
-            addBelInput(belId, id("G2"), id(g2Name));
-            addBelInput(belId, id("G3"), id(g3Name));
+            addBelInput(belId, id("G[0]"), id(g0Name));
+            addBelInput(belId, id("G[1]"), id(g1Name));
+            addBelInput(belId, id("G[2]"), id(g2Name));
+            addBelInput(belId, id("G[3]"), id(g3Name));
 
-            addBelInput(belId, id("P0"), id(p0Name));
-            addBelInput(belId, id("P1"), id(p1Name));
-            addBelInput(belId, id("P2"), id(p2Name));
-            addBelInput(belId, id("P3"), id(p3Name));
+            addBelInput(belId, id("P[0]"), id(p0Name));
+            addBelInput(belId, id("P[1]"), id(p1Name));
+            addBelInput(belId, id("P[2]"), id(p2Name));
+            addBelInput(belId, id("P[3]"), id(p3Name));
 
-            addBelOutput(belId, id("S0"), id(s0Name));
-            addBelOutput(belId, id("S1"), id(s1Name));
-            addBelOutput(belId, id("S2"), id(s2Name));
-            addBelOutput(belId, id("S3"), id(s3Name));
+            addBelOutput(belId, id("S[0]"), id(s0Name));
+            addBelOutput(belId, id("S[1]"), id(s1Name));
+            addBelOutput(belId, id("S[2]"), id(s2Name));
+            addBelOutput(belId, id("S[3]"), id(s3Name));
           }
         }
       }
@@ -919,7 +919,7 @@ void Arch::assignArchInfo()
 {
     for (auto &cell : getCtx()->cells) {
         CellInfo *ci = cell.second.get();
-        if (ci->type == id("BORCA_CELL")) {
+        if (ci->type == id("LUT4") || ci->type == id("DFFER") || ci->type == id("CARRY4")) {
             ci->is_slice = true;
             ci->slice_clk = get_net_or_empty(ci, id("CLK"));
         } else {

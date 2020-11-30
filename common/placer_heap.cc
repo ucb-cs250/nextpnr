@@ -849,9 +849,12 @@ class HeAPPlacer
             remaining.pop();
 
             CellInfo *ci = ctx->cells.at(top.second).get();
+            std::cout << "Legalizing cell " << ci->name.str(ctx) << '\n';
             // Was now placed, ignore
-            if (ci->bel != BelId())
+            if (ci->bel != BelId()) {
+                std::cout << "already placed!\n";
                 continue;
+            }
             // log_info("   Legalising %s (%s)\n", top.second.c_str(ctx), ci->type.c_str(ctx));
             int bt = std::get<0>(bel_types.at(ci->type));
             auto &fb = fast_bels.at(bt);
@@ -1077,7 +1080,78 @@ class HeAPPlacer
                     }
                 }
             }
+            // Enforce LUT->CARRY4 connections
+            //
+            if (ci->type != ctx->id("CARRY4"))
+                continue;
+            Loc loc = ctx->getBelLocation(ci->bel);
+            BelId newBel;
+
+            PortInfo &port_p0 = ci->ports.at(ctx->id("P[0]"));
+            CellInfo *drv_p0 = port_p0.net->driver.cell;
+            NPNR_ASSERT(drv_p0->type == ctx->id("LUT4"));
+            cell_locs[drv_p0->name].x = loc.x;
+            cell_locs[drv_p0->name].y = loc.y;
+            // LUT1
+            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 0)), drv_p0, STRENGTH_FIXED);
+
+            PortInfo &port_p1 = ci->ports.at(ctx->id("P[1]"));
+            CellInfo *drv_p1 = port_p1.net->driver.cell;
+            NPNR_ASSERT(drv_p1->type == ctx->id("LUT4"));
+            cell_locs[drv_p1->name].x = loc.x;
+            cell_locs[drv_p1->name].y = loc.y;
+            // LUT3
+            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 2)), drv_p1, STRENGTH_FIXED);
+
+            PortInfo &port_p2 = ci->ports.at(ctx->id("P[2]"));
+            CellInfo *drv_p2 = port_p2.net->driver.cell;
+            NPNR_ASSERT(drv_p2->type == ctx->id("LUT4"));
+            cell_locs[drv_p2->name].x = loc.x;
+            cell_locs[drv_p2->name].y = loc.y;
+            // LUT5
+            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 4)), drv_p2, STRENGTH_FIXED);
+
+            PortInfo &port_p3 = ci->ports.at(ctx->id("P[3]"));
+            CellInfo *drv_p3 = port_p3.net->driver.cell;
+            NPNR_ASSERT(drv_p3->type == ctx->id("LUT4"));
+            cell_locs[drv_p3->name].x = loc.x;
+            cell_locs[drv_p3->name].y = loc.y;
+            // LUT7
+            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 6)), drv_p3, STRENGTH_FIXED);
+
+            PortInfo &port_g0 = ci->ports.at(ctx->id("G[0]"));
+            CellInfo *drv_g0 = port_g0.net->driver.cell;
+            NPNR_ASSERT(drv_g0->type == ctx->id("LUT4"));
+            cell_locs[drv_g0->name].x = loc.x;
+            cell_locs[drv_g0->name].y = loc.y;
+            // LUT0
+            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 1)), drv_g0, STRENGTH_FIXED);
+
+            PortInfo &port_g1 = ci->ports.at(ctx->id("G[1]"));
+            CellInfo *drv_g1 = port_g1.net->driver.cell;
+            NPNR_ASSERT(drv_g1->type == ctx->id("LUT4"));
+            cell_locs[drv_g1->name].x = loc.x;
+            cell_locs[drv_g1->name].y = loc.y;
+            // LUT2
+            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 3)), drv_g1, STRENGTH_FIXED);
+
+            PortInfo &port_g2 = ci->ports.at(ctx->id("G[2]"));
+            CellInfo *drv_g2 = port_g2.net->driver.cell;
+            NPNR_ASSERT(drv_g2->type == ctx->id("LUT4"));
+            cell_locs[drv_g2->name].x = loc.x;
+            cell_locs[drv_g2->name].y = loc.y;
+            // LUT4
+            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 5)), drv_g2, STRENGTH_FIXED);
+
+            PortInfo &port_g3 = ci->ports.at(ctx->id("G[3]"));
+            CellInfo *drv_g3 = port_g3.net->driver.cell;
+            NPNR_ASSERT(drv_g3->type == ctx->id("LUT4"));
+            cell_locs[drv_g3->name].x = loc.x;
+            cell_locs[drv_g3->name].y = loc.y;
+            // LUT6
+            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 7)), drv_g3, STRENGTH_FIXED);
         }
+
         auto endt = std::chrono::high_resolution_clock::now();
         sl_time += std::chrono::duration<float>(endt - startt).count();
     }

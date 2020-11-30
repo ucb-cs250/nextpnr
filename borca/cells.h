@@ -36,7 +36,7 @@ inline bool is_lut(const BaseCtx *ctx, const CellInfo *cell) { return cell->type
 inline bool is_ff(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("DFFER"); }
 
 // Return true if a cell is a carry_chain
-inline bool is_carry_chain(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("carry_chain"); }
+inline bool is_cc(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("CARRY4"); }
 
 inline bool is_vcc(const BaseCtx *ctx, const CellInfo *cell) { return cell->type == ctx->id("VCC"); }
 
