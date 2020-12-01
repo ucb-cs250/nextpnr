@@ -20,6 +20,7 @@
 #include <chrono>
 #include <cmath>
 #include <queue>
+#include <iostream>
 
 #include "log.h"
 #include "router1.h"
@@ -279,6 +280,12 @@ struct Router1
         if (net_info->driver.cell == nullptr)
             return true;
 
+        // skip nets that is driven by constant cells or clk
+        if (net_info->driver.cell->type == ctx->id("VCC") ||
+            net_info->driver.cell->type == ctx->id("GND") ||
+            net_info->driver.cell->type == ctx->id("$nextpnr_ibuf"))
+            return true;
+
         return false;
     }
 
@@ -293,7 +300,7 @@ struct Router1
             if (skip_net(net_info))
                 continue;
 
-#if 0
+#if 1
             if (ctx->debug)
                 log("[check] net: %s\n", ctx->nameOf(net_info));
 #endif
@@ -310,13 +317,13 @@ struct Router1
                 arc.user_idx = user_idx;
 
                 valid_arcs.insert(arc);
-#if 0
+#if 1
                 if (ctx->debug)
                     log("[check]   arc: %s %s\n", ctx->nameOfWire(src_wire), ctx->nameOfWire(dst_wire));
 #endif
 
                 for (WireId wire : arc_to_wires[arc]) {
-#if 0
+#if 1
                     if (ctx->debug)
                         log("[check]     wire: %s\n", ctx->nameOfWire(wire));
 #endif
@@ -505,7 +512,9 @@ struct Router1
             QueuedWire qw = queue.top();
             queue.pop();
 
+            //std::cout << "Visiting Wire " << ctx->nameOfPip(qw.wire) << " " << ctx->getPipsDownhill(qw.wire).size() << '\n';
             for (auto pip : ctx->getPipsDownhill(qw.wire)) {
+                //std::cout << "Visiting Pip " << ctx->nameOfPip(pip) << '\n';
                 delay_t next_delay = qw.delay + ctx->getPipDelay(pip).maxDelay();
                 delay_t next_penalty = qw.penalty;
                 delay_t next_bonus = qw.bonus;
@@ -809,9 +818,9 @@ bool router1(Context *ctx, const Router1Cfg &cfg)
                 last_arcs_with_ripup = router.arcs_with_ripup;
                 last_arcs_without_ripup = router.arcs_without_ripup;
                 ctx->yield();
-#ifndef NDEBUG
+//#ifndef NDEBUG
                 router.check();
-#endif
+//#endif
             }
 
             if (ctx->debug)
@@ -821,10 +830,10 @@ bool router1(Context *ctx, const Router1Cfg &cfg)
 
             if (!router.route_arc(arc, true)) {
                 log_warning("Failed to find a route for arc %d of net %s.\n", arc.user_idx, ctx->nameOf(arc.net_info));
-#ifndef NDEBUG
+//#ifndef NDEBUG
                 router.check();
                 ctx->check();
-#endif
+//#endif
                 ctx->unlock();
                 return false;
             }
@@ -871,9 +880,14 @@ bool Context::checkRoutedDesign() const
         if (net_info->is_global)
             continue;
 #endif
-
         if (ctx->debug)
             log("checking net %s\n", ctx->nameOf(net_info));
+
+        // skip nets that is driven by constant cells or clk
+        if (net_info->driver.cell->type == ctx->id("VCC") ||
+            net_info->driver.cell->type == ctx->id("GND") ||
+            net_info->driver.cell->type == ctx->id("$nextpnr_ibuf"))
+            return true;
 
         if (net_info->users.empty()) {
             if (ctx->debug)

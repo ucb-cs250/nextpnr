@@ -321,6 +321,80 @@ class HeAPPlacer
 
         placer1_refine(ctx, Placer1Cfg(ctx));
 
+        // Manual placement
+        for (auto cell : sorted(ctx->cells)) {
+            CellInfo *ci = cell.second;
+            // Ignore constant cells for now
+            if (ci->type == ctx->id("VCC") || ci->type == ctx->id("GND") ||
+                ci->type == ctx->id("$nextpnr_ibuf"))
+              continue;
+            ctx->unbindBel(ci->bel);
+        }
+        for (auto cell : sorted(ctx->cells)) {
+            CellInfo *ci = cell.second;
+            // Ignore constant cells for now
+            if (ci->type == ctx->id("VCC") || ci->type == ctx->id("GND") ||
+                ci->type == ctx->id("$nextpnr_ibuf"))
+              continue;
+
+            if (ci->name == ctx->id("a[0]_DFF")) {
+                Loc loc(1, 1, 8);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("a[1]_DFF")) {
+                Loc loc(1, 1, 9);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("a[2]_DFF")) {
+                Loc loc(1, 1, 10);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("a[3]_DFF")) {
+                Loc loc(1, 1, 11);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("a[4]_DFF")) {
+                Loc loc(1, 1, 12);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("a[5]_DFF")) {
+                Loc loc(1, 1, 13);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("a[6]_DFF")) {
+                Loc loc(1, 1, 14);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("$abc$92$auto$blifparse.cc:498:parse_blif$94")) {
+                Loc loc(3, 3, 0);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("$abc$92$auto$blifparse.cc:498:parse_blif$93")) {
+                Loc loc(3, 4, 0);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("$auto$simplemap.cc:420:simplemap_dff$91")) {
+                Loc loc(3, 4, 8);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            } else if (ci->name == ctx->id("out_DFF")) {
+                Loc loc(5, 5, 8);
+                cell_locs[ci->name].x = loc.x;
+                cell_locs[ci->name].y = loc.y;
+                ctx->bindBel(ctx->getBelByLocation(loc), ci, STRENGTH_FIXED);
+            }
+        }
+
         // Print cells' locations
         for (auto cell : sorted(ctx->cells)) {
             CellInfo *ci = cell.second;
@@ -1080,76 +1154,98 @@ class HeAPPlacer
                     }
                 }
             }
-            // Enforce LUT->CARRY4 connections
-            //
-            if (ci->type != ctx->id("CARRY4"))
-                continue;
-            Loc loc = ctx->getBelLocation(ci->bel);
-            BelId newBel;
 
-            PortInfo &port_p0 = ci->ports.at(ctx->id("P[0]"));
-            CellInfo *drv_p0 = port_p0.net->driver.cell;
-            NPNR_ASSERT(drv_p0->type == ctx->id("LUT4"));
-            cell_locs[drv_p0->name].x = loc.x;
-            cell_locs[drv_p0->name].y = loc.y;
-            // LUT1
-            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 0)), drv_p0, STRENGTH_FIXED);
+            if (ci->type == ctx->id("LUT4")) {
+                // Enforce LUT->LUT connections (S44) into correct z positions
+                // LUT0 (1) -> LUT1 (0), LUT2 (3) -> LUT3 (2), LUT4 (5) -> LUT5 (4), LUT6 (7) -> LUT7 (6)
 
-            PortInfo &port_p1 = ci->ports.at(ctx->id("P[1]"));
-            CellInfo *drv_p1 = port_p1.net->driver.cell;
-            NPNR_ASSERT(drv_p1->type == ctx->id("LUT4"));
-            cell_locs[drv_p1->name].x = loc.x;
-            cell_locs[drv_p1->name].y = loc.y;
-            // LUT3
-            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 2)), drv_p1, STRENGTH_FIXED);
+                Loc loc = ctx->getBelLocation(ci->bel);
+                BelId newBel;
 
-            PortInfo &port_p2 = ci->ports.at(ctx->id("P[2]"));
-            CellInfo *drv_p2 = port_p2.net->driver.cell;
-            NPNR_ASSERT(drv_p2->type == ctx->id("LUT4"));
-            cell_locs[drv_p2->name].x = loc.x;
-            cell_locs[drv_p2->name].y = loc.y;
-            // LUT5
-            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 4)), drv_p2, STRENGTH_FIXED);
+                PortInfo &port_i0 = ci->ports.at(ctx->id("I0"));
+                CellInfo *drv_i0 = port_i0.net->driver.cell;
+                if (drv_i0->type == ctx->id("LUT4")) {
+                    cell_locs[drv_i0->name].x = loc.x;
+                    cell_locs[drv_i0->name].y = loc.y;
+                    if (loc.z % 2 == 1) {
+                        //ctx->unbindBel(ctx->getBelByLocation(loc));
+                        //ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, loc.z - 1)), ci, STRENGTH_FIXED);
+                        //ctx->bindBel(ctx->getBelByLocation(loc), drv_i0, STRENGTH_FIXED);
+                    } else {
+                        //ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, loc.z + 1)), drv_i0, STRENGTH_FIXED);
+                    }
+                }
+            }
 
-            PortInfo &port_p3 = ci->ports.at(ctx->id("P[3]"));
-            CellInfo *drv_p3 = port_p3.net->driver.cell;
-            NPNR_ASSERT(drv_p3->type == ctx->id("LUT4"));
-            cell_locs[drv_p3->name].x = loc.x;
-            cell_locs[drv_p3->name].y = loc.y;
-            // LUT7
-            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 6)), drv_p3, STRENGTH_FIXED);
+            if (ci->type == ctx->id("CARRY4")) {
+                // Enforce LUT->CARRY4 connections into correct z positions
+                Loc loc = ctx->getBelLocation(ci->bel);
+                BelId newBel;
 
-            PortInfo &port_g0 = ci->ports.at(ctx->id("G[0]"));
-            CellInfo *drv_g0 = port_g0.net->driver.cell;
-            NPNR_ASSERT(drv_g0->type == ctx->id("LUT4"));
-            cell_locs[drv_g0->name].x = loc.x;
-            cell_locs[drv_g0->name].y = loc.y;
-            // LUT0
-            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 1)), drv_g0, STRENGTH_FIXED);
+                PortInfo &port_p0 = ci->ports.at(ctx->id("P[0]"));
+                CellInfo *drv_p0 = port_p0.net->driver.cell;
+                NPNR_ASSERT(drv_p0->type == ctx->id("LUT4"));
+                cell_locs[drv_p0->name].x = loc.x;
+                cell_locs[drv_p0->name].y = loc.y;
+                // LUT1
+                ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 0)), drv_p0, STRENGTH_FIXED);
 
-            PortInfo &port_g1 = ci->ports.at(ctx->id("G[1]"));
-            CellInfo *drv_g1 = port_g1.net->driver.cell;
-            NPNR_ASSERT(drv_g1->type == ctx->id("LUT4"));
-            cell_locs[drv_g1->name].x = loc.x;
-            cell_locs[drv_g1->name].y = loc.y;
-            // LUT2
-            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 3)), drv_g1, STRENGTH_FIXED);
+                PortInfo &port_p1 = ci->ports.at(ctx->id("P[1]"));
+                CellInfo *drv_p1 = port_p1.net->driver.cell;
+                NPNR_ASSERT(drv_p1->type == ctx->id("LUT4"));
+                cell_locs[drv_p1->name].x = loc.x;
+                cell_locs[drv_p1->name].y = loc.y;
+                // LUT3
+                ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 2)), drv_p1, STRENGTH_FIXED);
 
-            PortInfo &port_g2 = ci->ports.at(ctx->id("G[2]"));
-            CellInfo *drv_g2 = port_g2.net->driver.cell;
-            NPNR_ASSERT(drv_g2->type == ctx->id("LUT4"));
-            cell_locs[drv_g2->name].x = loc.x;
-            cell_locs[drv_g2->name].y = loc.y;
-            // LUT4
-            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 5)), drv_g2, STRENGTH_FIXED);
+                PortInfo &port_p2 = ci->ports.at(ctx->id("P[2]"));
+                CellInfo *drv_p2 = port_p2.net->driver.cell;
+                NPNR_ASSERT(drv_p2->type == ctx->id("LUT4"));
+                cell_locs[drv_p2->name].x = loc.x;
+                cell_locs[drv_p2->name].y = loc.y;
+                // LUT5
+                ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 4)), drv_p2, STRENGTH_FIXED);
 
-            PortInfo &port_g3 = ci->ports.at(ctx->id("G[3]"));
-            CellInfo *drv_g3 = port_g3.net->driver.cell;
-            NPNR_ASSERT(drv_g3->type == ctx->id("LUT4"));
-            cell_locs[drv_g3->name].x = loc.x;
-            cell_locs[drv_g3->name].y = loc.y;
-            // LUT6
-            ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 7)), drv_g3, STRENGTH_FIXED);
+                PortInfo &port_p3 = ci->ports.at(ctx->id("P[3]"));
+                CellInfo *drv_p3 = port_p3.net->driver.cell;
+                NPNR_ASSERT(drv_p3->type == ctx->id("LUT4"));
+                cell_locs[drv_p3->name].x = loc.x;
+                cell_locs[drv_p3->name].y = loc.y;
+                // LUT7
+                ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 6)), drv_p3, STRENGTH_FIXED);
+
+                PortInfo &port_g0 = ci->ports.at(ctx->id("G[0]"));
+                CellInfo *drv_g0 = port_g0.net->driver.cell;
+                NPNR_ASSERT(drv_g0->type == ctx->id("LUT4"));
+                cell_locs[drv_g0->name].x = loc.x;
+                cell_locs[drv_g0->name].y = loc.y;
+                // LUT0
+                ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 1)), drv_g0, STRENGTH_FIXED);
+
+                PortInfo &port_g1 = ci->ports.at(ctx->id("G[1]"));
+                CellInfo *drv_g1 = port_g1.net->driver.cell;
+                NPNR_ASSERT(drv_g1->type == ctx->id("LUT4"));
+                cell_locs[drv_g1->name].x = loc.x;
+                cell_locs[drv_g1->name].y = loc.y;
+                // LUT2
+                ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 3)), drv_g1, STRENGTH_FIXED);
+
+                PortInfo &port_g2 = ci->ports.at(ctx->id("G[2]"));
+                CellInfo *drv_g2 = port_g2.net->driver.cell;
+                NPNR_ASSERT(drv_g2->type == ctx->id("LUT4"));
+                cell_locs[drv_g2->name].x = loc.x;
+                cell_locs[drv_g2->name].y = loc.y;
+                // LUT4
+                ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 5)), drv_g2, STRENGTH_FIXED);
+
+                PortInfo &port_g3 = ci->ports.at(ctx->id("G[3]"));
+                CellInfo *drv_g3 = port_g3.net->driver.cell;
+                NPNR_ASSERT(drv_g3->type == ctx->id("LUT4"));
+                cell_locs[drv_g3->name].x = loc.x;
+                cell_locs[drv_g3->name].y = loc.y;
+                // LUT6
+                ctx->bindBel(ctx->getBelByLocation(Loc(loc.x, loc.y, 7)), drv_g3, STRENGTH_FIXED);
+            }
         }
 
         auto endt = std::chrono::high_resolution_clock::now();
