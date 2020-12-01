@@ -396,19 +396,19 @@ void Arch::setupPipsForCLB(int x, int y, int numSingleWires, int numDoubleWires,
         WireId dstWire = getWireByName(id(cb_single_name));
         std::string pip0LutName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "_LUT" + std::to_string(lut1Id) +"_O" +
+                                  "_CLB_COMB_O" + std::to_string(lut1Id) +
                                   "->" + CBType + "_SINGLE" + std::to_string(s);
         std::string pip1LutName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "_LUT" + std::to_string(lut0Id) +"_O" +
+                                  "_CLB_COMB_O" + std::to_string(lut0Id) +
                                   "->" + CBType + "_SINGLE" + std::to_string(s);
         std::string pip0DffName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "_DFF" + std::to_string(dff1Id) +"_O" +
+                                  "_CLB_SYNC_O" + std::to_string(dff1Id) +
                                   "->" + CBType + "_SINGLE" + std::to_string(s);
         std::string pip1DffName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "_DFF" + std::to_string(dff0Id) +"_O" +
+                                  "_CLB_SYNC_O" + std::to_string(dff0Id) +
                                   "->" + CBType + "_SINGLE" + std::to_string(s);
 
         addPip(id(pip0LutName), pipType, getWireName(src0LutWire), getWireName(dstWire), getDelayFromNS(0.01), Loc(x, y, 0));
@@ -424,19 +424,19 @@ void Arch::setupPipsForCLB(int x, int y, int numSingleWires, int numDoubleWires,
         WireId dstWire = getWireByName(id(cb_double_name));
         std::string pip0LutName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "_LUT" + std::to_string(lut1Id) +"_O" +
+                                  "_CLB_COMB_O" + std::to_string(lut1Id) +
                                   "->" + CBType + "_DOUBLE" + std::to_string(s);
         std::string pip1LutName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "_LUT" + std::to_string(lut0Id) +"_O" +
+                                  "_CLB_COMB_O" + std::to_string(lut0Id) +
                                   "->" + CBType + "_DOUBLE" + std::to_string(s);
         std::string pip0DffName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "_DFF" + std::to_string(dff1Id) +"_O" +
+                                  "_CLB_SYNC_O" + std::to_string(dff1Id) +
                                   "->" + CBType + "_DOUBLE" + std::to_string(s);
         std::string pip1DffName = "X" + std::to_string(x) +
                                   "Y" + std::to_string(y) +
-                                  "_DFF" + std::to_string(dff0Id) +"_O" +
+                                  "_CLB_SYNC_O" + std::to_string(dff0Id) +
                                   "->" + CBType + "_DOUBLE" + std::to_string(s);
 
         addPip(id(pip0LutName), pipType, getWireName(src0LutWire), getWireName(dstWire), getDelayFromNS(0.01), Loc(x, y, 0));
@@ -444,6 +444,69 @@ void Arch::setupPipsForCLB(int x, int y, int numSingleWires, int numDoubleWires,
         addPip(id(pip0DffName), pipType, getWireName(src0DffWire), getWireName(dstWire), getDelayFromNS(0.01), Loc(x, y, 0));
         addPip(id(pip1DffName), pipType, getWireName(src1DffWire), getWireName(dstWire), getDelayFromNS(0.01), Loc(x, y, 0));
     }
+}
+
+void Arch::setupPipsForSB(int x, int y, int s, int dir1, int dir2) {
+
+    IdString pipType = id("PIP");
+
+    std::string dir1Name = "";
+    std::string dir2Name = "";
+
+    if (dir1 == 0) {
+        dir1Name = "E";
+    } else if (dir1 == 1) {
+        dir1Name = "N";
+    } else if (dir1 == 2) {
+        dir1Name = "W";
+    } else if (dir1 == 3) {
+        dir1Name = "S";
+    }
+
+    if (dir2 == 0) {
+        dir2Name = "E";
+    } else if (dir2 == 1) {
+        dir2Name = "N";
+    } else if (dir2 == 2) {
+        dir2Name = "W";
+    } else if (dir2 == 3) {
+        dir2Name = "S";
+    }
+
+    bool switch_wire = false;
+    if ((dir1Name == "N" && dir2Name == "W") ||
+        (dir1Name == "W" && dir2Name == "N") ||
+        (dir1Name == "E" && dir2Name == "S") ||
+        (dir1Name == "S" && dir2Name == "E"))
+        switch_wire = true;
+
+    int s1 = s;
+    int s2 = s;
+
+    if (switch_wire) {
+        if (s1 % 2 == 0)
+            s2 = s1 + 1;
+        else
+            s2 = s1 - 1;   
+    }
+
+    std::string sbDir1WireName = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "_SB_" + dir1Name + "_SINGLE" +
+                                 std::to_string(s1);
+    std::string sbDir2WireName = "X" + std::to_string(x) +
+                                 "Y" + std::to_string(y) +
+                                 "_SB_" + dir2Name + "_SINGLE" +
+                                 std::to_string(s2);
+    std::string pipDir1toDir2Name = "X" + std::to_string(x) +
+                                    "Y" + std::to_string(y) +
+                                    "_SB_" + dir1Name + std::to_string(s1) +
+                                    "_SB_" + dir2Name + std::to_string(s2) + "_SINGLE";
+    WireId sbDir1Wire = getWireByName(id(sbDir1WireName));
+    WireId sbDir2Wire = getWireByName(id(sbDir2WireName));
+
+    addPip(id(pipDir1toDir2Name), pipType, getWireName(sbDir1Wire),
+           getWireName(sbDir2Wire), getDelayFromNS(0.01), Loc(x, y, 0));
 }
 
 Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
@@ -672,39 +735,63 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
     IdString sbWireType = id("SB_WIRE");
 
     for (int x = 0; x < gridDimX; x++) {
-      for (int y = 0; y < gridDimY; y++) {
-        for (int k = 0; k < numSingleWires; k++) {
-          std::string cb0_single_name = "X" + std::to_string(x) +
-                                        "Y" + std::to_string(y) + "_CB0_SINGLE" + std::to_string(k);
-          std::string cb1_single_name = "X" + std::to_string(x) +
-                                        "Y" + std::to_string(y) + "_CB1_SINGLE" + std::to_string(k);
-          std::string sb0_single_name = "X" + std::to_string(x) +
-                                        "Y" + std::to_string(y) + "_SB0_SINGLE" + std::to_string(k);
-          std::string sb1_single_name = "X" + std::to_string(x) +
-                                        "Y" + std::to_string(y) + "_SB1_SINGLE" + std::to_string(k);
+        for (int y = 0; y < gridDimY; y++) {
+            for (int k = 0; k < numSingleWires; k++) {
+                std::string cb0_single_name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CB0_SINGLE" + std::to_string(k);
+                std::string cb1_single_name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CB1_SINGLE" + std::to_string(k);
+                std::string sb_n_single_name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_N_SINGLE" + std::to_string(k);
+                std::string sb_s_single_name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_S_SINGLE" + std::to_string(k);
+                std::string sb_e_single_name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_E_SINGLE" + std::to_string(k);
+                std::string sb_w_single_name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_W_SINGLE" + std::to_string(k);
 
-          addWire(id(cb0_single_name), cbWireType, x, y);
-          addWire(id(cb1_single_name), cbWireType, x, y);
-          addWire(id(sb0_single_name), sbWireType, x, y);
-          addWire(id(sb1_single_name), sbWireType, x, y);
+                addWire(id(cb0_single_name), cbWireType, x, y);
+                addWire(id(cb1_single_name), cbWireType, x, y);
+                addWire(id(sb_n_single_name), sbWireType, x, y);
+                addWire(id(sb_s_single_name), sbWireType, x, y);
+                addWire(id(sb_e_single_name), sbWireType, x, y);
+                addWire(id(sb_w_single_name), sbWireType, x, y);
+            }
+
+            for (int k = 0; k < numDoubleWires; k++) {
+                std::string cb0_double_name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CB0_DOUBLE" + std::to_string(k);
+                std::string cb1_double_name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CB1_DOUBLE" + std::to_string(k);
+                std::string sb_n_double_name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_N_DOUBLE" + std::to_string(k);
+                std::string sb_s_double_name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_S_DOUBLE" + std::to_string(k);
+                std::string sb_e_double_name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_E_DOUBLE" + std::to_string(k);
+                std::string sb_w_double_name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_W_DOUBLE" + std::to_string(k);
+
+                addWire(id(cb0_double_name), cbWireType, x, y);
+                addWire(id(cb1_double_name), cbWireType, x, y);
+                addWire(id(sb_n_double_name), sbWireType, x, y);
+                addWire(id(sb_s_double_name), sbWireType, x, y);
+                addWire(id(sb_e_double_name), sbWireType, x, y);
+                addWire(id(sb_w_double_name), sbWireType, x, y);
+            }
         }
-
-        for (int k = 0; k < numDoubleWires; k++) {
-          std::string cb0_double_name = "X" + std::to_string(x) +
-                                        "Y" + std::to_string(y) + "_CB0_DOUBLE" + std::to_string(k);
-          std::string cb1_double_name = "X" + std::to_string(x) +
-                                        "Y" + std::to_string(y) + "_CB1_DOUBLE" + std::to_string(k);
-          std::string sb0_double_name = "X" + std::to_string(x) +
-                                        "Y" + std::to_string(y) + "_SB0_DOUBLE" + std::to_string(k);
-          std::string sb1_double_name = "X" + std::to_string(x) +
-                                        "Y" + std::to_string(y) + "_SB1_DOUBLE" + std::to_string(k);
-
-          addWire(id(cb0_double_name), cbWireType, x, y);
-          addWire(id(cb1_double_name), cbWireType, x, y);
-          addWire(id(sb0_double_name), sbWireType, x, y);
-          addWire(id(sb1_double_name), sbWireType, x, y);
-        }
-      }
     }
 
     // PipInfo
@@ -730,13 +817,608 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
     // LUT (O) -> CLB_COMB_O
     // CARRY (S) -> CLB_COMB_O
     // DFF (Q) -> CLB_SYNC_O
-     for (int x = 0; x < gridDimX; x++) {
+
+    for (int x = 0; x < gridDimX; x++) {
         for (int y = 0; y < gridDimY; y++) {
-            // TODO
+            // LUT -> CLB outputs (COMB)
+            std::string lut1_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z0" + "_" + "O";
+            std::string lut0_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z1" + "_" + "O";
+            std::string lut3_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z2" + "_" + "O";
+            std::string lut2_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z3" + "_" + "O";
+            std::string lut5_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z4" + "_" + "O";
+            std::string lut4_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z5" + "_" + "O";
+            std::string lut7_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z6" + "_" + "O";
+            std::string lut6_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z7" + "_" + "O";
+
+            WireId lut1OutWire = getWireByName(id(lut1_output_name));
+            WireId lut0OutWire = getWireByName(id(lut0_output_name));
+            WireId lut3OutWire = getWireByName(id(lut3_output_name));
+            WireId lut2OutWire = getWireByName(id(lut2_output_name));
+            WireId lut5OutWire = getWireByName(id(lut5_output_name));
+            WireId lut4OutWire = getWireByName(id(lut4_output_name));
+            WireId lut7OutWire = getWireByName(id(lut7_output_name));
+            WireId lut6OutWire = getWireByName(id(lut6_output_name));
+
+            std::string clbCombOut0Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_COMB0";
+            std::string clbCombOut1Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_COMB1";
+            std::string clbCombOut2Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_COMB2";
+            std::string clbCombOut3Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_COMB3";
+            std::string clbCombOut4Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_COMB4";
+            std::string clbCombOut5Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_COMB5";
+            std::string clbCombOut6Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_COMB6";
+            std::string clbCombOut7Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_COMB7";
+
+            addWire(id(clbCombOut0Name), id("CLB"), x, y);
+            addWire(id(clbCombOut1Name), id("CLB"), x, y);
+            addWire(id(clbCombOut2Name), id("CLB"), x, y);
+            addWire(id(clbCombOut3Name), id("CLB"), x, y);
+            addWire(id(clbCombOut4Name), id("CLB"), x, y);
+            addWire(id(clbCombOut5Name), id("CLB"), x, y);
+            addWire(id(clbCombOut6Name), id("CLB"), x, y);
+            addWire(id(clbCombOut7Name), id("CLB"), x, y);
+
+            WireId clbCombOut0Wire = getWireByName(id(clbCombOut0Name));
+            WireId clbCombOut1Wire = getWireByName(id(clbCombOut1Name));
+            WireId clbCombOut2Wire = getWireByName(id(clbCombOut2Name));
+            WireId clbCombOut3Wire = getWireByName(id(clbCombOut3Name));
+            WireId clbCombOut4Wire = getWireByName(id(clbCombOut4Name));
+            WireId clbCombOut5Wire = getWireByName(id(clbCombOut5Name));
+            WireId clbCombOut6Wire = getWireByName(id(clbCombOut6Name));
+            WireId clbCombOut7Wire = getWireByName(id(clbCombOut7Name));
+
+            std::string pipLutToCLBOut0Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "LUT1->CLB_COMB0";
+            std::string pipLutToCLBOut1Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "LUT0->CLB_COMB1";
+            std::string pipLutToCLBOut2Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "LUT3->CLB_COMB2";
+            std::string pipLutToCLBOut3Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "LUT2->CLB_COMB3";
+            std::string pipLutToCLBOut4Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "LUT5->CLB_COMB4";
+            std::string pipLutToCLBOut5Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "LUT4->CLB_COMB5";
+            std::string pipLutToCLBOut6Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "LUT7->CLB_COMB6";
+            std::string pipLutToCLBOut7Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "LUT6->CLB_COMB7";
+
+            addPip(id(pipLutToCLBOut0Name), pipType,
+                   getWireName(lut1OutWire), getWireName(clbCombOut0Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLutToCLBOut1Name), pipType,
+                   getWireName(lut0OutWire), getWireName(clbCombOut1Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLutToCLBOut2Name), pipType,
+                   getWireName(lut3OutWire), getWireName(clbCombOut2Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLutToCLBOut3Name), pipType,
+                   getWireName(lut2OutWire), getWireName(clbCombOut3Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLutToCLBOut4Name), pipType,
+                   getWireName(lut5OutWire), getWireName(clbCombOut4Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLutToCLBOut5Name), pipType,
+                   getWireName(lut4OutWire), getWireName(clbCombOut5Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLutToCLBOut6Name), pipType,
+                   getWireName(lut7OutWire), getWireName(clbCombOut6Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLutToCLBOut7Name), pipType,
+                   getWireName(lut6OutWire), getWireName(clbCombOut7Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+
+            // DFF -> CLB outputs (SYNC)
+            std::string dff1_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z8" + "_" + "Q";
+            std::string dff0_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z9" + "_" + "Q";
+            std::string dff3_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z10" + "_" + "Q";
+            std::string dff2_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z11" + "_" + "Q";
+            std::string dff5_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z12" + "_" + "Q";
+            std::string dff4_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z13" + "_" + "Q";
+            std::string dff7_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z14" + "_" + "Q";
+            std::string dff6_output_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z15" + "_" + "Q";
+
+            WireId dff1OutWire = getWireByName(id(dff1_output_name));
+            WireId dff0OutWire = getWireByName(id(dff0_output_name));
+            WireId dff3OutWire = getWireByName(id(dff3_output_name));
+            WireId dff2OutWire = getWireByName(id(dff2_output_name));
+            WireId dff5OutWire = getWireByName(id(dff5_output_name));
+            WireId dff4OutWire = getWireByName(id(dff4_output_name));
+            WireId dff7OutWire = getWireByName(id(dff7_output_name));
+            WireId dff6OutWire = getWireByName(id(dff6_output_name));
+
+            std::string clbSyncOut0Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_SYNC0";
+            std::string clbSyncOut1Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_SYNC1";
+            std::string clbSyncOut2Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_SYNC2";
+            std::string clbSyncOut3Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_SYNC3";
+            std::string clbSyncOut4Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_SYNC4";
+            std::string clbSyncOut5Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_SYNC5";
+            std::string clbSyncOut6Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_SYNC6";
+            std::string clbSyncOut7Name = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "CLB_SYNC7";
+
+            addWire(id(clbSyncOut0Name), id("CLB"), x, y);
+            addWire(id(clbSyncOut1Name), id("CLB"), x, y);
+            addWire(id(clbSyncOut2Name), id("CLB"), x, y);
+            addWire(id(clbSyncOut3Name), id("CLB"), x, y);
+            addWire(id(clbSyncOut4Name), id("CLB"), x, y);
+            addWire(id(clbSyncOut5Name), id("CLB"), x, y);
+            addWire(id(clbSyncOut6Name), id("CLB"), x, y);
+            addWire(id(clbSyncOut7Name), id("CLB"), x, y);
+
+            WireId clbSyncOut0Wire = getWireByName(id(clbSyncOut0Name));
+            WireId clbSyncOut1Wire = getWireByName(id(clbSyncOut1Name));
+            WireId clbSyncOut2Wire = getWireByName(id(clbSyncOut2Name));
+            WireId clbSyncOut3Wire = getWireByName(id(clbSyncOut3Name));
+            WireId clbSyncOut4Wire = getWireByName(id(clbSyncOut4Name));
+            WireId clbSyncOut5Wire = getWireByName(id(clbSyncOut5Name));
+            WireId clbSyncOut6Wire = getWireByName(id(clbSyncOut6Name));
+            WireId clbSyncOut7Wire = getWireByName(id(clbSyncOut7Name));
+
+            std::string pipDffToCLBOut0Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "DFF1->CLB_SYNC0";
+            std::string pipDffToCLBOut1Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "DFF0->CLB_SYNC1";
+            std::string pipDffToCLBOut2Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "DFF3->CLB_SYNC2";
+            std::string pipDffToCLBOut3Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "DFF2->CLB_SYNC3";
+            std::string pipDffToCLBOut4Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "DFF5->CLB_SYNC4";
+            std::string pipDffToCLBOut5Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "DFF4->CLB_SYNC5";
+            std::string pipDffToCLBOut6Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "DFF7->CLB_SYNC6";
+            std::string pipDffToCLBOut7Name = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "DFF6->CLB_SYNC7";
+
+            addPip(id(pipDffToCLBOut0Name), pipType,
+                   getWireName(dff1OutWire), getWireName(clbSyncOut0Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipDffToCLBOut1Name), pipType,
+                   getWireName(dff0OutWire), getWireName(clbSyncOut1Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipDffToCLBOut2Name), pipType,
+                   getWireName(dff3OutWire), getWireName(clbSyncOut2Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipDffToCLBOut3Name), pipType,
+                   getWireName(dff2OutWire), getWireName(clbSyncOut3Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipDffToCLBOut4Name), pipType,
+                   getWireName(dff5OutWire), getWireName(clbSyncOut4Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipDffToCLBOut5Name), pipType,
+                   getWireName(dff4OutWire), getWireName(clbSyncOut5Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipDffToCLBOut6Name), pipType,
+                   getWireName(dff7OutWire), getWireName(clbSyncOut6Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipDffToCLBOut7Name), pipType,
+                   getWireName(dff6OutWire), getWireName(clbSyncOut7Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+
+            // CARRY4 -> CLB outputs (COMB)
+            std::string ccS0Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "S[0]";
+            std::string ccS1Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "S[1]";
+            std::string ccS2Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "S[2]";
+            std::string ccS3Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "S[3]";
+
+            WireId ccS0Wire = getWireByName(id(ccS0Name));
+            WireId ccS1Wire = getWireByName(id(ccS1Name));
+            WireId ccS2Wire = getWireByName(id(ccS2Name));
+            WireId ccS3Wire = getWireByName(id(ccS3Name));
+
+            std::string pipCarryToCLBOut0Name = "X" + std::to_string(x) +
+                                                "Y" + std::to_string(y) +
+                                                "CARRY4_S0->CLB_COMB0";
+            std::string pipCarryToCLBOut1Name = "X" + std::to_string(x) +
+                                                "Y" + std::to_string(y) +
+                                                "CARRY4_S1->CLB_COMB2";
+            std::string pipCarryToCLBOut2Name = "X" + std::to_string(x) +
+                                                "Y" + std::to_string(y) +
+                                                "CARRY4_S2->CLB_COMB4";
+            std::string pipCarryToCLBOut3Name = "X" + std::to_string(x) +
+                                                "Y" + std::to_string(y) +
+                                                "CARRY4_S3->CLB_COMB6";
+
+            addPip(id(pipCarryToCLBOut0Name), pipType,
+                   getWireName(ccS0Wire), getWireName(clbCombOut0Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCarryToCLBOut1Name), pipType,
+                   getWireName(ccS1Wire), getWireName(clbCombOut2Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCarryToCLBOut2Name), pipType,
+                   getWireName(ccS2Wire), getWireName(clbCombOut4Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCarryToCLBOut3Name), pipType,
+                   getWireName(ccS3Wire), getWireName(clbCombOut6Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+
+            // LUT -> CARRY4 (P)
+            std::string ccP0Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "P[0]";
+            std::string ccP1Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "P[1]";
+            std::string ccP2Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "P[2]";
+            std::string ccP3Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "P[3]";
+
+            WireId ccP0Wire = getWireByName(id(ccP0Name));
+            WireId ccP1Wire = getWireByName(id(ccP1Name));
+            WireId ccP2Wire = getWireByName(id(ccP2Name));
+            WireId ccP3Wire = getWireByName(id(ccP3Name));
+
+            std::string pipLut1ToCarryP0Name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "LUT1->CARRY4_P0";
+            std::string pipLut3ToCarryP1Name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "LUT3->CARRY4_P1";
+            std::string pipLut5ToCarryP2Name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "LUT5->CARRY4_P2";
+            std::string pipLut7ToCarryP3Name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "LUT7->CARRY4_P3";
+
+            addPip(id(pipLut1ToCarryP0Name), pipType,
+                   getWireName(lut1OutWire),
+                   getWireName(ccP0Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut3ToCarryP1Name), pipType,
+                   getWireName(lut3OutWire),
+                   getWireName(ccP1Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut5ToCarryP2Name), pipType,
+                   getWireName(lut5OutWire),
+                   getWireName(ccP2Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut7ToCarryP3Name), pipType,
+                   getWireName(lut7OutWire),
+                   getWireName(ccP3Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+
+            // LUT -> CARRY4 (G)
+            std::string ccG0Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "G[0]";
+            std::string ccG1Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "G[1]";
+            std::string ccG2Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "G[2]";
+            std::string ccG3Name = "X" + std::to_string(x) +
+                                   "Y" + std::to_string(y) +
+                                   "Z19" + "_" + "G[3]";
+
+            WireId ccG0Wire = getWireByName(id(ccG0Name));
+            WireId ccG1Wire = getWireByName(id(ccG1Name));
+            WireId ccG2Wire = getWireByName(id(ccG2Name));
+            WireId ccG3Wire = getWireByName(id(ccG3Name));
+
+            std::string pipLut0ToCarryG0Name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "LUT0->CARRY4_G0";
+            std::string pipLut2ToCarryG1Name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "LUT2->CARRY4_G1";
+            std::string pipLut4ToCarryG2Name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "LUT4->CARRY4_G2";
+            std::string pipLut6ToCarryG3Name = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y) +
+                                               "LUT6->CARRY4_G3";
+
+            addPip(id(pipLut0ToCarryG0Name), pipType,
+                   getWireName(lut0OutWire),
+                   getWireName(ccG0Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut2ToCarryG1Name), pipType,
+                   getWireName(lut2OutWire),
+                   getWireName(ccG1Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut4ToCarryG2Name), pipType,
+                   getWireName(lut4OutWire),
+                   getWireName(ccG2Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut6ToCarryG3Name), pipType,
+                   getWireName(lut6OutWire),
+                   getWireName(ccG3Wire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+
+            // CARRY4 -> DFF inputs (D)
+            std::string dff1_input_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z8" + "_" + "D";
+            std::string dff0_input_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z9" + "_" + "D";
+            std::string dff3_input_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z10" + "_" + "D";
+            std::string dff2_input_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z11" + "_" + "D";
+            std::string dff5_input_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z12" + "_" + "D";
+            std::string dff4_input_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z13" + "_" + "D";
+            std::string dff7_input_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z14" + "_" + "D";
+            std::string dff6_input_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z15" + "_" + "D";
+
+            WireId dff1InWire = getWireByName(id(dff1_input_name));
+            WireId dff0InWire = getWireByName(id(dff0_input_name));
+            WireId dff3InWire = getWireByName(id(dff3_input_name));
+            WireId dff2InWire = getWireByName(id(dff2_input_name));
+            WireId dff5InWire = getWireByName(id(dff5_input_name));
+            WireId dff4InWire = getWireByName(id(dff4_input_name));
+            WireId dff7InWire = getWireByName(id(dff7_input_name));
+            WireId dff6InWire = getWireByName(id(dff6_input_name));
+
+            std::string pipCarryS0ToDffName = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "CARRY4_S0->DFF1";
+            std::string pipCarryS1ToDffName = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "CARRY4_S1->DFF3";
+            std::string pipCarryS2ToDffName = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "CARRY4_S2->DFF5";
+            std::string pipCarryS3ToDffName = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "CARRY4_S3->DFF7";
+
+            addPip(id(pipCarryS0ToDffName), pipType,
+                   getWireName(ccS0Wire), getWireName(dff1InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCarryS1ToDffName), pipType,
+                   getWireName(ccS1Wire), getWireName(dff3InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCarryS2ToDffName), pipType,
+                   getWireName(ccS2Wire), getWireName(dff5InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCarryS3ToDffName), pipType,
+                   getWireName(ccS3Wire), getWireName(dff7InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+
+            // LUT -> DFF inputs (D)
+            std::string pipLut1ToDffName = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "LUT1->DFF1";
+            std::string pipLut0ToDffName = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "LUT0->DFF0";
+            std::string pipLut3ToDffName = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "LUT3->DFF3";
+            std::string pipLut2ToDffName = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "LUT2->DFF2";
+            std::string pipLut5ToDffName = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "LUT5->DFF5";
+            std::string pipLut4ToDffName = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "LUT4->DFF4";
+            std::string pipLut7ToDffName = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "LUT7->DFF7";
+            std::string pipLut6ToDffName = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "LUT6->DFF6";
+            addPip(id(pipLut1ToDffName), pipType,
+                   getWireName(lut1OutWire), getWireName(dff1InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut0ToDffName), pipType,
+                   getWireName(lut0OutWire), getWireName(dff0InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut3ToDffName), pipType,
+                   getWireName(lut3OutWire), getWireName(dff3InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut2ToDffName), pipType,
+                   getWireName(lut2OutWire), getWireName(dff2InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut5ToDffName), pipType,
+                   getWireName(lut5OutWire), getWireName(dff5InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut4ToDffName), pipType,
+                   getWireName(lut4OutWire), getWireName(dff4InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut7ToDffName), pipType,
+                   getWireName(lut7OutWire), getWireName(dff7InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipLut6ToDffName), pipType,
+                   getWireName(lut6OutWire), getWireName(dff6InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+
+            // LUT (By Pass) -> DFF inputs (D)
+            std::string lut1_in0_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z0" + "_" + "I0";
+            std::string lut0_in0_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z1" + "_" + "I0";
+            std::string lut3_in0_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z2" + "_" + "I0";
+            std::string lut2_in0_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z3" + "_" + "I0";
+            std::string lut5_in0_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z4" + "_" + "I0";
+            std::string lut4_in0_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z5" + "_" + "I0";
+            std::string lut7_in0_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z6" + "_" + "I0";
+            std::string lut6_in0_name = "X" + std::to_string(x) +
+                                           "Y" + std::to_string(y) +
+                                           "Z7" + "_" + "I0";
+
+            WireId lut1In0Wire = getWireByName(id(lut1_in0_name));
+            WireId lut0In0Wire = getWireByName(id(lut0_in0_name));
+            WireId lut3In0Wire = getWireByName(id(lut3_in0_name));
+            WireId lut2In0Wire = getWireByName(id(lut2_in0_name));
+            WireId lut5In0Wire = getWireByName(id(lut5_in0_name));
+            WireId lut4In0Wire = getWireByName(id(lut4_in0_name));
+            WireId lut7In0Wire = getWireByName(id(lut7_in0_name));
+            WireId lut6In0Wire = getWireByName(id(lut6_in0_name));
+
+            std::string pipBYLut1ToDffName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y) +
+                                             "BYLUT1->DFF1";
+            std::string pipBYLut0ToDffName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y) +
+                                             "BYLUT0->DFF0";
+            std::string pipBYLut3ToDffName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y) +
+                                             "BYLUT3->DFF3";
+            std::string pipBYLut2ToDffName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y) +
+                                             "BYLUT2->DFF2";
+            std::string pipBYLut5ToDffName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y) +
+                                             "BYLUT5->DFF5";
+            std::string pipBYLut4ToDffName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y) +
+                                             "BYLUT4->DFF4";
+            std::string pipBYLut7ToDffName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y) +
+                                             "BYLUT7->DFF7";
+            std::string pipBYLut6ToDffName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y) +
+                                             "BYLUT6->DFF6";
+
+            addPip(id(pipBYLut1ToDffName), pipType,
+                   getWireName(lut1In0Wire), getWireName(dff1InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipBYLut0ToDffName), pipType,
+                   getWireName(lut0In0Wire), getWireName(dff0InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipBYLut3ToDffName), pipType,
+                   getWireName(lut3In0Wire), getWireName(dff3InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipBYLut2ToDffName), pipType,
+                   getWireName(lut2In0Wire), getWireName(dff2InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipBYLut5ToDffName), pipType,
+                   getWireName(lut5In0Wire), getWireName(dff5InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipBYLut4ToDffName), pipType,
+                   getWireName(lut4In0Wire), getWireName(dff4InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipBYLut7ToDffName), pipType,
+                   getWireName(lut7In0Wire), getWireName(dff7InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipBYLut6ToDffName), pipType,
+                   getWireName(lut6In0Wire), getWireName(dff6InWire),
+                   getDelayFromNS(0.01), Loc(x, y, 0));
+
         }
     }
 
-    // SB {N, S, E, W}
+    // SB {E, N, W, S}
     // switchbox-element-two mapping
     // N0E0, N0S0, N0W1, N1E1, N1S1, N1W0
     // E0W0, E0N0, E0S1, E1W1, E1N1, E1S0
@@ -744,7 +1426,16 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
     // W0E0, W0S0, W0N1, W1E1, W1S1, W1N0
     for (int x = 0; x < gridDimX; x++) {
         for (int y = 0; y < gridDimY; y++) {
-            // TODO
+            for (int s = 0; s < numSingleWires; s++) {
+                setupPipsForSB(x, y, s, 0, 1); // E->N
+                setupPipsForSB(x, y, s, 1, 0); // N->E
+                setupPipsForSB(x, y, s, 1, 3); // N->S
+                setupPipsForSB(x, y, s, 3, 1); // S->N
+                setupPipsForSB(x, y, s, 1, 2); // N->W
+                setupPipsForSB(x, y, s, 2, 1); // W->N
+                setupPipsForSB(x, y, s, 0, 2); // E->W
+                setupPipsForSB(x, y, s, 2, 0); // W->E
+            }
         }
     }
 
@@ -753,8 +1444,8 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
         for (int y = 0; y < gridDimY; y++) {
             bool isNorthAvail = (y + 1) < gridDimY;
             bool isEastAvail  = (x + 1) < gridDimX;
-            bool isSouthAvail = (x - 1) >= 0;
-            bool isWestAvail  = (y - 1) >= 0;
+            bool isSouthAvail = (y - 1) >= 0;
+            bool isWestAvail  = (x - 1) >= 0;
 
             // FIXME: how to capture bidir property of single wires and double wires?
             // For now, use separate PIP for each direction
@@ -767,41 +1458,45 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                 std::string cb1WireName = "X" + std::to_string(x) +
                                           "Y" + std::to_string(y) +
                                           "_CB1_SINGLE" + std::to_string(s);
-                std::string sbWireName = "X" + std::to_string(x) +
-                                         "Y" + std::to_string(y) +
-                                         "_SB_SINGLE" + std::to_string(s);
+                std::string sbSWireName = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "_SB_S_SINGLE" + std::to_string(s);
+                std::string sbWWireName = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "_SB_W_SINGLE" + std::to_string(s);
 
                 WireId cb0Wire = getWireByName(id(cb0WireName));
                 WireId cb1Wire = getWireByName(id(cb1WireName));
-                WireId sbWire  = getWireByName(id(sbWireName));
+                WireId sbSWire = getWireByName(id(sbSWireName));
+                WireId sbWWire = getWireByName(id(sbWWireName));
 
                 // CB->SB
-                std::string pip0Name = "X" + std::to_string(x) +
-                                       "Y" + std::to_string(y) +
-                                       "_CB0->SB_SINGLE" + std::to_string(s);
-                std::string pip1Name = "X" + std::to_string(x) +
-                                       "Y" + std::to_string(y) +
-                                       "_CB1->SB_SINGLE" + std::to_string(s);
+                std::string pipCB2SB0Name = "X" + std::to_string(x) +
+                                            "Y" + std::to_string(y) +
+                                            "_CB0->SB_S_SINGLE" + std::to_string(s);
+                std::string pipCB2SB1Name = "X" + std::to_string(x) +
+                                            "Y" + std::to_string(y) +
+                                            "_CB1->SB_W_SINGLE" + std::to_string(s);
                 // SB->CB
-                std::string pip2Name = "X" + std::to_string(x) +
-                                       "Y" + std::to_string(y) +
-                                       "_SB->CB0_SINGLE" + std::to_string(s);
-                std::string pip3Name = "X" + std::to_string(x) +
-                                       "Y" + std::to_string(y) +
-                                       "_SB->CB1_SINGLE" + std::to_string(s);
+                std::string pipSB2CB0Name = "X" + std::to_string(x) +
+                                            "Y" + std::to_string(y) +
+                                            "_SB_S->CB0_SINGLE" + std::to_string(s);
+                std::string pipSB2CB1Name = "X" + std::to_string(x) +
+                                            "Y" + std::to_string(y) +
+                                            "_SB_W->CB1_SINGLE" + std::to_string(s);
 
-                addPip(id(pip0Name), pipType,
-                       getWireName(cb0Wire), getWireName(sbWire),
+                addPip(id(pipCB2SB0Name), pipType,
+                       getWireName(cb0Wire), getWireName(sbSWire),
                        getDelayFromNS(0.01), Loc(x, y, 0));
-                addPip(id(pip1Name), pipType,
-                       getWireName(cb1Wire), getWireName(sbWire),
+                addPip(id(pipCB2SB1Name), pipType,
+                       getWireName(cb1Wire), getWireName(sbWWire),
                        getDelayFromNS(0.01), Loc(x, y, 0));
 
-                addPip(id(pip2Name), pipType,
-                       getWireName(sbWire), getWireName(cb0Wire),
+                addPip(id(pipSB2CB0Name), pipType,
+                       getWireName(sbSWire), getWireName(cb0Wire),
                        getDelayFromNS(0.01), Loc(x, y, 0));
-                addPip(id(pip3Name), pipType,
-                       getWireName(sbWire), getWireName(cb1Wire),
+                addPip(id(pipSB2CB1Name), pipType,
+                       getWireName(sbWWire), getWireName(cb1Wire),
                        getDelayFromNS(0.01), Loc(x, y, 0));
             }
 
@@ -813,41 +1508,45 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                 std::string cb1WireName = "X" + std::to_string(x) +
                                           "Y" + std::to_string(y) +
                                           "_CB1_DOUBLE" + std::to_string(s);
-                std::string sbWireName = "X" + std::to_string(x) +
-                                         "Y" + std::to_string(y) +
-                                         "_SB_DOUBLE" + std::to_string(s);
+                std::string sbSWireName = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "_SB_S_DOUBLE" + std::to_string(s);
+                std::string sbWWireName = "X" + std::to_string(x) +
+                                          "Y" + std::to_string(y) +
+                                          "_SB_W_DOUBLE" + std::to_string(s);
 
                 WireId cb0Wire = getWireByName(id(cb0WireName));
                 WireId cb1Wire = getWireByName(id(cb1WireName));
-                WireId sbWire  = getWireByName(id(sbWireName));
+                WireId sbSWire = getWireByName(id(sbSWireName));
+                WireId sbWWire = getWireByName(id(sbWWireName));
 
                 // CB->SB
-                std::string pip0Name = "X" + std::to_string(x) +
-                                       "Y" + std::to_string(y) +
-                                       "_CB0->SB_DOUBLE" + std::to_string(s);
-                std::string pip1Name = "X" + std::to_string(x) +
-                                       "Y" + std::to_string(y) +
-                                       "_CB1->SB_DOUBLE" + std::to_string(s);
+                std::string pipCB2SB0Name = "X" + std::to_string(x) +
+                                            "Y" + std::to_string(y) +
+                                            "_CB0->SB_S_DOUBLE" + std::to_string(s);
+                std::string pipCB2SB1Name = "X" + std::to_string(x) +
+                                            "Y" + std::to_string(y) +
+                                            "_CB1->SB_W_DOUBLE" + std::to_string(s);
                 // SB->CB
-                std::string pip2Name = "X" + std::to_string(x) +
-                                       "Y" + std::to_string(y) +
-                                       "_SB->CB0_DOUBLE" + std::to_string(s);
-                std::string pip3Name = "X" + std::to_string(x) +
-                                       "Y" + std::to_string(y) +
-                                       "_SB->CB1_DOUBLE" + std::to_string(s);
+                std::string pipSB2CB0Name = "X" + std::to_string(x) +
+                                            "Y" + std::to_string(y) +
+                                            "_SB_S->CB0_DOUBLE" + std::to_string(s);
+                std::string pipSB2CB1Name = "X" + std::to_string(x) +
+                                            "Y" + std::to_string(y) +
+                                            "_SB_W->CB1_DOUBLE" + std::to_string(s);
 
-                addPip(id(pip0Name), pipType,
-                       getWireName(cb0Wire), getWireName(sbWire),
+                addPip(id(pipCB2SB0Name), pipType,
+                       getWireName(cb0Wire), getWireName(sbSWire),
                        getDelayFromNS(0.01), Loc(x, y, 0));
-                addPip(id(pip1Name), pipType,
-                       getWireName(cb1Wire), getWireName(sbWire),
+                addPip(id(pipCB2SB1Name), pipType,
+                       getWireName(cb1Wire), getWireName(sbWWire),
                        getDelayFromNS(0.01), Loc(x, y, 0));
 
-                addPip(id(pip2Name), pipType,
-                       getWireName(sbWire), getWireName(cb0Wire),
+                addPip(id(pipSB2CB0Name), pipType,
+                       getWireName(sbSWire), getWireName(cb0Wire),
                        getDelayFromNS(0.01), Loc(x, y, 0));
-                addPip(id(pip3Name), pipType,
-                       getWireName(sbWire), getWireName(cb1Wire),
+                addPip(id(pipSB2CB1Name), pipType,
+                       getWireName(sbWWire), getWireName(cb1Wire),
                        getDelayFromNS(0.01), Loc(x, y, 0));
             }
 
@@ -857,9 +1556,9 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                     std::string cb0WireName = "X" + std::to_string(x) +
                                               "Y" + std::to_string(y) +
                                               "_CB0_SINGLE" + std::to_string(s);
-                    std::string sbWireName = "X" + std::to_string(x - 1) +
-                                             "Y" + std::to_string(y) +
-                                             "_SB_SINGLE" + std::to_string(s);
+                    std::string sbWireName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y - 1) +
+                                             "_SB_N_SINGLE" + std::to_string(s);
 
                     WireId cb0Wire = getWireByName(id(cb0WireName));
                     WireId sbWire  = getWireByName(id(sbWireName));
@@ -867,27 +1566,27 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                     // CB->SB
                     std::string pipCB2SBName = "X" + std::to_string(x) +
                                                "Y" + std::to_string(y) +
-                                               "_CB0->SB_SINGLE" + std::to_string(s);
+                                               "_CB0->SB_N_SINGLE" + std::to_string(s);
                     // SB->CB
-                    std::string pipSB2CBName = "X" + std::to_string(x - 1) +
-                                               "Y" + std::to_string(y) +
-                                               "_SB->CB0_SINGLE" + std::to_string(s);
+                    std::string pipSB2CBName = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y - 1) +
+                                               "_SB_N->CB0_SINGLE" + std::to_string(s);
 
                     addPip(id(pipCB2SBName), pipType,
                            getWireName(cb0Wire), getWireName(sbWire),
                            getDelayFromNS(0.01), Loc(x, y, 0));
                     addPip(id(pipSB2CBName), pipType,
                            getWireName(sbWire), getWireName(cb0Wire),
-                           getDelayFromNS(0.01), Loc(x - 1, y, 0));
+                           getDelayFromNS(0.01), Loc(x, y - 1, 0));
                 }
 
                 for (int s = 4; s < numDoubleWires; s++) {
                     std::string cb0WireName = "X" + std::to_string(x) +
                                               "Y" + std::to_string(y) +
                                               "_CB0_DOUBLE" + std::to_string(s);
-                    std::string sbWireName = "X" + std::to_string(x - 1) +
-                                             "Y" + std::to_string(y) +
-                                             "_SB_DOUBLE" + std::to_string(s);
+                    std::string sbWireName = "X" + std::to_string(x) +
+                                             "Y" + std::to_string(y - 1) +
+                                             "_SB_N_DOUBLE" + std::to_string(s);
 
                     WireId cb0Wire = getWireByName(id(cb0WireName));
                     WireId sbWire  = getWireByName(id(sbWireName));
@@ -895,18 +1594,18 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                     // CB->SB
                     std::string pipCB2SBName = "X" + std::to_string(x) +
                                                "Y" + std::to_string(y) +
-                                               "_CB0->SB_DOUBLE" + std::to_string(s);
+                                               "_CB0->SB_N_DOUBLE" + std::to_string(s);
                     // SB->CB
-                    std::string pipSB2CBName = "X" + std::to_string(x - 1) +
-                                               "Y" + std::to_string(y) +
-                                               "_SB->CB0_DOUBLE" + std::to_string(s);
+                    std::string pipSB2CBName = "X" + std::to_string(x) +
+                                               "Y" + std::to_string(y - 1) +
+                                               "_SB_N->CB0_DOUBLE" + std::to_string(s);
 
                     addPip(id(pipCB2SBName), pipType,
                            getWireName(cb0Wire), getWireName(sbWire),
                            getDelayFromNS(0.01), Loc(x, y, 0));
                     addPip(id(pipSB2CBName), pipType,
                            getWireName(sbWire), getWireName(cb0Wire),
-                           getDelayFromNS(0.01), Loc(x - 1, y, 0));
+                           getDelayFromNS(0.01), Loc(x, y - 1, 0));
                 }
             }
 
@@ -916,9 +1615,9 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                     std::string cb1WireName = "X" + std::to_string(x) +
                                               "Y" + std::to_string(y) +
                                               "_CB1_SINGLE" + std::to_string(s);
-                    std::string sbWireName = "X" + std::to_string(x) +
-                                             "Y" + std::to_string(y - 1) +
-                                             "_SB_SINGLE" + std::to_string(s);
+                    std::string sbWireName = "X" + std::to_string(x - 1) +
+                                             "Y" + std::to_string(y) +
+                                             "_SB_E_SINGLE" + std::to_string(s);
 
                     WireId cb1Wire = getWireByName(id(cb1WireName));
                     WireId sbWire  = getWireByName(id(sbWireName));
@@ -926,11 +1625,11 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                     // CB->SB
                     std::string pipCB2SBName = "X" + std::to_string(x) +
                                                "Y" + std::to_string(y) +
-                                               "_CB1->SB_SINGLE" + std::to_string(s);
+                                               "_CB1->SB_E_SINGLE" + std::to_string(s);
                     // SB->CB
-                    std::string pipSB2CBName = "X" + std::to_string(x) +
-                                               "Y" + std::to_string(y - 1) +
-                                               "_SB->CB1_SINGLE" + std::to_string(s);
+                    std::string pipSB2CBName = "X" + std::to_string(x - 1) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_E->CB1_SINGLE" + std::to_string(s);
 
                     addPip(id(pipCB2SBName), pipType,
                            getWireName(cb1Wire), getWireName(sbWire),
@@ -944,9 +1643,9 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                     std::string cb1WireName = "X" + std::to_string(x) +
                                               "Y" + std::to_string(y) +
                                               "_CB1_DOUBLE" + std::to_string(s);
-                    std::string sbWireName = "X" + std::to_string(x) +
-                                             "Y" + std::to_string(y - 1) +
-                                             "_SB_DOUBLE" + std::to_string(s);
+                    std::string sbWireName = "X" + std::to_string(x - 1) +
+                                             "Y" + std::to_string(y) +
+                                             "_SB_E_DOUBLE" + std::to_string(s);
 
                     WireId cb1Wire = getWireByName(id(cb1WireName));
                     WireId sbWire  = getWireByName(id(sbWireName));
@@ -954,11 +1653,11 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                     // CB->SB
                     std::string pipCB2SBName = "X" + std::to_string(x) +
                                                "Y" + std::to_string(y) +
-                                               "_CB1->SB_DOUBLE" + std::to_string(s);
+                                               "_CB1->SB_E_DOUBLE" + std::to_string(s);
                     // SB->CB
-                    std::string pipSB2CBName = "X" + std::to_string(x) +
-                                               "Y" + std::to_string(y - 1) +
-                                               "_SB->CB1_DOUBLE" + std::to_string(s);
+                    std::string pipSB2CBName = "X" + std::to_string(x - 1) +
+                                               "Y" + std::to_string(y) +
+                                               "_SB_E->CB1_DOUBLE" + std::to_string(s);
 
                     addPip(id(pipCB2SBName), pipType,
                            getWireName(cb1Wire), getWireName(sbWire),
@@ -980,18 +1679,18 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                                               "_CB0_DOUBLE" + std::to_string(s);
                     std::string sbWireName  = "X" + std::to_string(x) +
                                               "Y" + std::to_string(y + 1) +
-                                              "_SB_DOUBLE" + std::to_string(s);
+                                              "_SB_S_DOUBLE" + std::to_string(s);
                     WireId cb0Wire = getWireByName(id(cb0WireName));
                     WireId sbWire  = getWireByName(id(sbWireName));
 
                     // CB->SB
                     std::string pipCB2SBName = "X" + std::to_string(x) +
                                                "Y" + std::to_string(y) +
-                                               "_CB0->SB_DOUBLE" + std::to_string(s);
+                                               "_CB0->SB_S_DOUBLE" + std::to_string(s);
                     // SB->CB
                     std::string pipSB2CBName = "X" + std::to_string(x) +
                                                "Y" + std::to_string(y + 1) +
-                                               "_SB->CB0_DOUBLE" + std::to_string(s);
+                                               "_SB->CB0_S_DOUBLE" + std::to_string(s);
                     addPip(id(pipCB2SBName), pipType,
                            getWireName(cb0Wire), getWireName(sbWire),
                            getDelayFromNS(0.01), Loc(x, y, 0));
@@ -1006,18 +1705,18 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                                               "_CB1_DOUBLE" + std::to_string(s);
                     std::string sbWireName  = "X" + std::to_string(x + 1) +
                                               "Y" + std::to_string(y) +
-                                              "_SB_DOUBLE" + std::to_string(s);
+                                              "_SB_E_DOUBLE" + std::to_string(s);
                     WireId cb1Wire = getWireByName(id(cb1WireName));
                     WireId sbWire  = getWireByName(id(sbWireName));
 
                     // CB->SB
                     std::string pipCB2SBName = "X" + std::to_string(x) +
                                                "Y" + std::to_string(y) +
-                                               "_CB0->SB_DOUBLE" + std::to_string(s);
+                                               "_CB0->SB_E_DOUBLE" + std::to_string(s);
                     // SB->CB
                     std::string pipSB2CBName = "X" + std::to_string(x + 1) +
                                                "Y" + std::to_string(y) +
-                                               "_SB->CB0_DOUBLE" + std::to_string(s);
+                                               "_SB_E->CB0_DOUBLE" + std::to_string(s);
                     addPip(id(pipCB2SBName), pipType,
                            getWireName(cb1Wire), getWireName(sbWire),
                            getDelayFromNS(0.01), Loc(x, y, 0));
