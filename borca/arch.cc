@@ -31,8 +31,10 @@ NEXTPNR_NAMESPACE_BEGIN
 WireInfo &Arch::wire_info(IdString wire)
 {
     auto w = wires.find(wire);
-    if (w == wires.end())
+    if (w == wires.end()) {
+        std::cout << wire.c_str(this) << '\n';
         NPNR_ASSERT_FALSE_STR("no wire named " + wire.str(this));
+    }
     return w->second;
 }
 
@@ -265,47 +267,47 @@ void Arch::setupPipsForCLB(int x, int y, int numSingleWires, int numDoubleWires,
     std::string CBType = "";
     int xWire = x;
     int yWire = y;
-    int lut1Id = 0;
     int lut0Id = 1;
-    int dff1Id = 0;
+    int lut1Id = 0;
     int dff0Id = 1;
+    int dff1Id = 0;
 
     if (side == 0) {
         // East
         CBType = "CB0";
         xWire = x;
         yWire = y;
-        lut1Id = 0;
         lut0Id = 1;
-        dff1Id = 0 + 8;
+        lut1Id = 0;
         dff0Id = 1 + 8;
+        dff1Id = 0 + 8;
     } else if (side == 1) {
         // South
         CBType = "CB1";
         xWire = x;
         yWire = y - 1;
-        lut1Id = 2;
         lut0Id = 3;
-        dff1Id = 2 + 8;
+        lut1Id = 2;
         dff0Id = 3 + 8;
+        dff1Id = 2 + 8;
     } else if (side == 2) {
         // West
         CBType = "CB0";
         xWire = x - 1;
         yWire = y;
-        lut1Id = 4;
         lut0Id = 5;
-        dff1Id = 4 + 8;
+        lut1Id = 4;
         dff0Id = 5 + 8;
+        dff1Id = 4 + 8;
     } else if (side == 3) {
         // North
         CBType = "CB1";
         xWire = x;
         yWire = y;
-        lut1Id = 6;
         lut0Id = 7;
-        dff1Id = 6 + 8;
+        lut1Id = 6;
         dff0Id = 7 + 8;
+        dff1Id = 6 + 8;
     }
 
     NPNR_ASSERT(side < 4);
@@ -320,14 +322,14 @@ void Arch::setupPipsForCLB(int x, int y, int numSingleWires, int numDoubleWires,
     for (int k = 0; k < 4; k++) {
         std::string lut1_input_name = "X" + std::to_string(x) +
                                       "Y" + std::to_string(y) +
-                                      "Z" + std::to_string(lut1Id) +
-                                      "_" + "I" + std::to_string(k);
-        WireId dst0Wire = getWireByName(id(lut1_input_name));
-        std::string lut0_input_name = "X" + std::to_string(x) +
-                                      "Y" + std::to_string(y) +
                                       "Z" + std::to_string(lut0Id) +
                                       "_" + "I" + std::to_string(k);
-        WireId dst1Wire = getWireByName(id(lut0_input_name));
+        WireId dst1Wire = getWireByName(id(lut1_input_name));
+        std::string lut0_input_name = "X" + std::to_string(x) +
+                                      "Y" + std::to_string(y) +
+                                      "Z" + std::to_string(lut1Id) +
+                                      "_" + "I" + std::to_string(k);
+        WireId dst0Wire = getWireByName(id(lut0_input_name));
 
         for (int s = 0; s < numSingleWires; s++) {
             std::string cb_single0_in_name = "X" + std::to_string(xWire) +
@@ -413,25 +415,25 @@ void Arch::setupPipsForCLB(int x, int y, int numSingleWires, int numDoubleWires,
     }
 
     // CLB outputs -> ConnectionBlock
-    std::string lut1_output_name = "X" + std::to_string(x) +
-                                   "Y" + std::to_string(y) +
-                                   "Z" + std::to_string(lut1Id) + "_" + "O";
-    WireId src0LutWire = getWireByName(id(lut1_output_name));
+    std::string clb_comb0_output_name = "X" + std::to_string(x) +
+                                        "Y" + std::to_string(y) +
+                                        "CLB_COMB" + std::to_string(lut1Id);
+    WireId src0CombWire = getWireByName(id(clb_comb0_output_name));
 
-    std::string lut0_output_name = "X" + std::to_string(x) +
-                                   "Y" + std::to_string(y) +
-                                   "Z" + std::to_string(lut0Id) + "_" + "O";
-    WireId src1LutWire = getWireByName(id(lut0_output_name));
+    std::string clb_comb1_output_name = "X" + std::to_string(x) +
+                                        "Y" + std::to_string(y) +
+                                        "CLB_COMB" + std::to_string(lut0Id);
+    WireId src1CombWire = getWireByName(id(clb_comb1_output_name));
 
-    std::string dff1_output_name = "X" + std::to_string(x) +
-                                   "Y" + std::to_string(y) +
-                                   "Z" + std::to_string(dff1Id) + "_" + "Q";
-    WireId src0DffWire = getWireByName(id(dff1_output_name));
+    std::string clb_sync0_output_name = "X" + std::to_string(x) +
+                                        "Y" + std::to_string(y) +
+                                        "CLB_SYNC" + std::to_string(dff1Id - 8);
+    WireId src0SyncWire = getWireByName(id(clb_sync0_output_name));
 
-    std::string dff0_output_name = "X" + std::to_string(x) +
-                                   "Y" + std::to_string(y) +
-                                   "Z" + std::to_string(dff0Id) + "_" + "Q";
-    WireId src1DffWire = getWireByName(id(dff0_output_name));
+    std::string clb_sync1_output_name = "X" + std::to_string(x) +
+                                        "Y" + std::to_string(y) +
+                                        "CLB_SYNC" + std::to_string(dff0Id - 8);
+    WireId src1SyncWire = getWireByName(id(clb_sync1_output_name));
 
     for (int s = 0; s < numSingleWires; s++) {
         std::string cb_single0_out_name = "X" + std::to_string(xWire) +
@@ -464,33 +466,33 @@ void Arch::setupPipsForCLB(int x, int y, int numSingleWires, int numDoubleWires,
 
         std::string pip00DffName = "X" + std::to_string(x) +
                                    "Y" + std::to_string(y) +
-                                   "_CLB_SYNC_O" + std::to_string(dff1Id) +
+                                   "_CLB_SYNC_O" + std::to_string(dff1Id - 8) +
                                    "->" + CBType + "_SINGLE0_" + std::to_string(s);
         std::string pip01DffName = "X" + std::to_string(x) +
                                    "Y" + std::to_string(y) +
-                                   "_CLB_SYNC_O" + std::to_string(dff1Id) +
+                                   "_CLB_SYNC_O" + std::to_string(dff1Id - 8) +
                                    "->" + CBType + "_SINGLE1_" + std::to_string(s);
 
         std::string pip10DffName = "X" + std::to_string(x) +
                                    "Y" + std::to_string(y) +
-                                   "_CLB_SYNC_O" + std::to_string(dff0Id) +
+                                   "_CLB_SYNC_O" + std::to_string(dff0Id - 8) +
                                    "->" + CBType + "_SINGLE0_" + std::to_string(s);
         std::string pip11DffName = "X" + std::to_string(x) +
                                    "Y" + std::to_string(y) +
-                                   "_CLB_SYNC_O" + std::to_string(dff0Id) +
+                                   "_CLB_SYNC_O" + std::to_string(dff0Id - 8) +
                                    "->" + CBType + "_SINGLE1_" + std::to_string(s);
 
-        addPip(id(pip00LutName), pipType, getWireName(src0LutWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
-        addPip(id(pip01LutName), pipType, getWireName(src0LutWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip00LutName), pipType, getWireName(src0CombWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip01LutName), pipType, getWireName(src0CombWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
 
-        addPip(id(pip10LutName), pipType, getWireName(src1LutWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
-        addPip(id(pip11LutName), pipType, getWireName(src1LutWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip10LutName), pipType, getWireName(src1CombWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip11LutName), pipType, getWireName(src1CombWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
 
-        addPip(id(pip00DffName), pipType, getWireName(src0DffWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
-        addPip(id(pip01DffName), pipType, getWireName(src0DffWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip00DffName), pipType, getWireName(src0SyncWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip01DffName), pipType, getWireName(src0SyncWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
 
-        addPip(id(pip10DffName), pipType, getWireName(src1DffWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
-        addPip(id(pip11DffName), pipType, getWireName(src1DffWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip10DffName), pipType, getWireName(src1SyncWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip11DffName), pipType, getWireName(src1SyncWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
     }
 
     for (int s = 0; s < numDoubleWires / 2; s++) {
@@ -540,17 +542,196 @@ void Arch::setupPipsForCLB(int x, int y, int numSingleWires, int numDoubleWires,
                                    "_CLB_SYNC_O" + std::to_string(dff0Id) +
                                    "->" + CBType + "_DOUBLE1_" + std::to_string(s);
 
-        addPip(id(pip00LutName), pipType, getWireName(src0LutWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
-        addPip(id(pip01LutName), pipType, getWireName(src0LutWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip00LutName), pipType, getWireName(src0CombWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip01LutName), pipType, getWireName(src0CombWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
 
-        addPip(id(pip10LutName), pipType, getWireName(src1LutWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
-        addPip(id(pip11LutName), pipType, getWireName(src1LutWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip10LutName), pipType, getWireName(src1CombWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip11LutName), pipType, getWireName(src1CombWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
 
-        addPip(id(pip00DffName), pipType, getWireName(src0DffWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
-        addPip(id(pip01DffName), pipType, getWireName(src0DffWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip00DffName), pipType, getWireName(src0SyncWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip01DffName), pipType, getWireName(src0SyncWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
 
-        addPip(id(pip10DffName), pipType, getWireName(src1DffWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
-        addPip(id(pip11DffName), pipType, getWireName(src1DffWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip10DffName), pipType, getWireName(src1SyncWire), getWireName(dst0Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+        addPip(id(pip11DffName), pipType, getWireName(src1SyncWire), getWireName(dst1Wire), getDelayFromNS(0.01), Loc(x, y, 0));
+    }
+
+    // Direct connections between the CLBs
+    // CLB0 -> CLB1
+    for (int i = 0; i < 4; i++) {
+        std::string pipCLB0Comb0_CLB1LUT1In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB0_COMB_O" + std::to_string(lut1Id) +
+                                              "->" + "CLB1_LUT1_I" + std::to_string(i);
+        std::string pipCLB0Comb0_CLB1LUT0In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB0_COMB_O" + std::to_string(lut1Id) +
+                                              "->" + "CLB1_LUT0_I" + std::to_string(i);
+
+        std::string pipCLB0Comb1_CLB1LUT1In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB0_COMB_O" + std::to_string(lut0Id) +
+                                              "->" + "CLB1_LUT1_I" + std::to_string(i);
+        std::string pipCLB0Comb1_CLB1LUT0In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB0_COMB_O" + std::to_string(lut0Id) +
+                                              "->" + "CLB1_LUT0_I" + std::to_string(i);
+
+        std::string pipCLB0Sync0_CLB1LUT1In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB0_SYNC_O" + std::to_string(lut1Id) +
+                                              "->" + "CLB1_LUT1_I" + std::to_string(i);
+        std::string pipCLB0Sync0_CLB1LUT0In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB0_SYNC_O" + std::to_string(lut1Id) +
+                                              "->" + "CLB1_LUT0_I" + std::to_string(i);
+
+        std::string pipCLB0Sync1_CLB1LUT1In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB0_SYNC_O" + std::to_string(lut0Id) +
+                                              "->" + "CLB1_LUT1_I" + std::to_string(i);
+        std::string pipCLB0Sync1_CLB1LUT0In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB0_SYNC_O" + std::to_string(lut0Id) +
+                                              "->" + "CLB1_LUT0_I" + std::to_string(i);
+
+        if (side == 0 && x + 1 < gridDimX) {
+            // East side
+            std::string lut1_in_name = "X" + std::to_string(x + 1) +
+                                       "Y" + std::to_string(y) +
+                                       "Z5_" + 
+                                       "I" + std::to_string(i);
+
+            std::string lut0_in_name = "X" + std::to_string(x + 1) +
+                                       "Y" + std::to_string(y) +
+                                       "Z4_" +
+                                       "I" + std::to_string(i);
+
+            WireId lut1InWire = getWireByName(id(lut1_in_name));
+            WireId lut0InWire = getWireByName(id(lut0_in_name));
+
+            addPip(id(pipCLB0Comb0_CLB1LUT1In), pipType, src0CombWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Comb0_CLB1LUT0In), pipType, src0CombWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Comb1_CLB1LUT1In), pipType, src1CombWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Comb1_CLB1LUT0In), pipType, src1CombWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+
+            addPip(id(pipCLB0Sync0_CLB1LUT1In), pipType, src0SyncWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Sync0_CLB1LUT0In), pipType, src0SyncWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Sync1_CLB1LUT1In), pipType, src1SyncWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Sync1_CLB1LUT0In), pipType, src1SyncWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+        } else if (side == 3 && y + 1 < gridDimY) {
+            // North side
+            std::string lut1_in_name = "X" + std::to_string(x) +
+                                       "Y" + std::to_string(y + 1) +
+                                       "Z3_" +
+                                       "I" + std::to_string(i);
+
+            std::string lut0_in_name = "X" + std::to_string(x) +
+                                       "Y" + std::to_string(y + 1) +
+                                       "Z2_" +
+                                       "I" + std::to_string(i);
+
+            WireId lut1InWire = getWireByName(id(lut1_in_name));
+            WireId lut0InWire = getWireByName(id(lut0_in_name));
+
+            addPip(id(pipCLB0Comb0_CLB1LUT1In), pipType, src0CombWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Comb0_CLB1LUT0In), pipType, src0CombWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Comb1_CLB1LUT1In), pipType, src1CombWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Comb1_CLB1LUT0In), pipType, src1CombWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+
+            addPip(id(pipCLB0Sync0_CLB1LUT1In), pipType, src0SyncWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Sync0_CLB1LUT0In), pipType, src0SyncWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Sync1_CLB1LUT1In), pipType, src1SyncWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB0Sync1_CLB1LUT0In), pipType, src1SyncWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+        }
+    }
+
+    // CLB1 -> CLB0
+    for (int i = 0; i < 4; i++) {
+        std::string pipCLB1Comb0_CLB0LUT1In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB1_COMB_O" + std::to_string(lut1Id) +
+                                              "->" + "CLB0_LUT1_I" + std::to_string(i);
+        std::string pipCLB1Comb0_CLB0LUT0In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB1_COMB_O" + std::to_string(lut1Id) +
+                                              "->" + "CLB0_LUT0_I" + std::to_string(i);
+
+        std::string pipCLB1Comb1_CLB0LUT1In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB1_COMB_O" + std::to_string(lut0Id) +
+                                              "->" + "CLB0_LUT1_I" + std::to_string(i);
+        std::string pipCLB1Comb1_CLB0LUT0In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB1_COMB_O" + std::to_string(lut0Id) +
+                                              "->" + "CLB0_LUT0_I" + std::to_string(i);
+
+        std::string pipCLB1Sync0_CLB0LUT1In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB1_SYNC_O" + std::to_string(lut1Id) +
+                                              "->" + "CLB0_LUT1_I" + std::to_string(i);
+        std::string pipCLB1Sync0_CLB0LUT0In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB1_SYNC_O" + std::to_string(lut1Id) +
+                                              "->" + "CLB0_LUT0_I" + std::to_string(i);
+
+        std::string pipCLB1Sync1_CLB0LUT1In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB1_SYNC_O" + std::to_string(lut0Id) +
+                                              "->" + "CLB0_LUT1_I" + std::to_string(i);
+        std::string pipCLB1Sync1_CLB0LUT0In = "X" + std::to_string(x) +
+                                              "Y" + std::to_string(y) +
+                                              "_CLB1_SYNC_O" + std::to_string(lut0Id) +
+                                              "->" + "CLB0_LUT0_I" + std::to_string(i);
+
+        if (side == 2 && x - 1 >= 0) {
+            // West side
+            std::string lut1_in_name = "X" + std::to_string(x - 1) +
+                                       "Y" + std::to_string(y) +
+                                       "Z1_" +
+                                       "I" + std::to_string(i);
+
+            std::string lut0_in_name = "X" + std::to_string(x - 1) +
+                                       "Y" + std::to_string(y) +
+                                       "Z0_" +
+                                       "I" + std::to_string(i);
+
+            WireId lut1InWire = getWireByName(id(lut1_in_name));
+            WireId lut0InWire = getWireByName(id(lut0_in_name));
+
+            addPip(id(pipCLB1Comb0_CLB0LUT1In), pipType, src0CombWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Comb0_CLB0LUT0In), pipType, src0CombWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Comb1_CLB0LUT1In), pipType, src1CombWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Comb1_CLB0LUT0In), pipType, src1CombWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+
+            addPip(id(pipCLB1Sync0_CLB0LUT1In), pipType, src0SyncWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Sync0_CLB0LUT0In), pipType, src0SyncWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Sync1_CLB0LUT1In), pipType, src1SyncWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Sync1_CLB0LUT0In), pipType, src1SyncWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+        } else if (side == 1 && y - 1 >= 0) {
+            // South side
+            std::string lut1_in_name = "X" + std::to_string(x) +
+                                       "Y" + std::to_string(y - 1) +
+                                       "Z7_" +
+                                       "I" + std::to_string(i);
+
+            std::string lut0_in_name = "X" + std::to_string(x) +
+                                       "Y" + std::to_string(y - 1) +
+                                       "Z6_" +
+                                       "I" + std::to_string(i);
+
+            WireId lut1InWire = getWireByName(id(lut1_in_name));
+            WireId lut0InWire = getWireByName(id(lut0_in_name));
+
+            addPip(id(pipCLB1Comb0_CLB0LUT1In), pipType, src0CombWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Comb0_CLB0LUT0In), pipType, src0CombWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Comb1_CLB0LUT1In), pipType, src1CombWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Comb1_CLB0LUT0In), pipType, src1CombWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+
+            addPip(id(pipCLB1Sync0_CLB0LUT1In), pipType, src0SyncWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Sync0_CLB0LUT0In), pipType, src0SyncWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Sync1_CLB0LUT1In), pipType, src1SyncWire, getWireName(lut1InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+            addPip(id(pipCLB1Sync1_CLB0LUT0In), pipType, src1SyncWire, getWireName(lut0InWire), getDelayFromNS(0.01), Loc(x, y, 0));
+        }
     }
 }
 
@@ -1046,19 +1227,6 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
 
     // PipInfo
     IdString pipType = id("PIP");
-
-    // East:  LUT0 (1) ->LUT1 (0)
-    // South: LUT2 (3) ->LUT3 (2)
-    // West:  LUT4 (5) ->LUT5 (4)
-    // North: LUT6 (7) ->LUT7 (6)
-    for (int x = 0; x < gridDimX; x++) {
-        for (int y = 0; y < gridDimY; y++) {
-            setupPipsForCLB(x, y, numSingleWires, numDoubleWires, 0); // East CLB IOs
-            setupPipsForCLB(x, y, numSingleWires, numDoubleWires, 1); // North CLB IOs
-            setupPipsForCLB(x, y, numSingleWires, numDoubleWires, 2); // West CLB IOs
-            setupPipsForCLB(x, y, numSingleWires, numDoubleWires, 3); // South CLB IOs
-        }
-    }
 
     // Intra-CLB connections
     // LUT (O) -> CARRY (P/G)
@@ -1665,6 +1833,19 @@ Arch::Arch(ArchArgs args) : chipName("borca"), args(args)
                    getWireName(lut6In0Wire), getWireName(dff6InWire),
                    getDelayFromNS(0.01), Loc(x, y, 0));
 
+        }
+    }
+
+    // East:  LUT0 (1) ->LUT1 (0)
+    // South: LUT2 (3) ->LUT3 (2)
+    // West:  LUT4 (5) ->LUT5 (4)
+    // North: LUT6 (7) ->LUT7 (6)
+    for (int x = 0; x < gridDimX; x++) {
+        for (int y = 0; y < gridDimY; y++) {
+            setupPipsForCLB(x, y, numSingleWires, numDoubleWires, 0); // East CLB IOs
+            setupPipsForCLB(x, y, numSingleWires, numDoubleWires, 1); // North CLB IOs
+            setupPipsForCLB(x, y, numSingleWires, numDoubleWires, 2); // West CLB IOs
+            setupPipsForCLB(x, y, numSingleWires, numDoubleWires, 3); // South CLB IOs
         }
     }
 
